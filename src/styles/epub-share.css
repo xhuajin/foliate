@@ -1,0 +1,132 @@
+/**
+ * 分享样式
+ */
+
+.modal.readit-modal-content,
+.modal-content.readit-share-modal {
+    width: fit-content;
+}
+
+.readit-share-body {
+    padding-left: 3rem;
+    padding-right: 3rem;
+    margin: 1rem 0;
+}
+
+.readit-share-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0.5rem 3rem 1rem 3rem;
+    gap: 0.5rem;
+}
+
+/* =============================
+   Share Card (image export)
+   ============================= */
+.readit-share-card {
+    background: var(--background-secondary);
+    color: var(--text-normal);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    padding: 28px 32px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.readit-share-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.readit-share-card-head-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.readit-share-card-title {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.readit-share-card-meta,
+.readit-share-card-badge,
+.readit-share-card-footer,
+.readit-share-card-footer span {
+    color: var(--text-muted);
+}
+
+.readit-share-card-meta {
+    font-size: 13px;
+}
+
+.readit-share-card-badge {
+    font-size: 12px;
+}
+
+.readit-share-card-body {
+    white-space: pre-wrap;
+    word-break: break-word;
+    padding: 12px 0 8px 0;
+}
+
+/* Body variants */
+.readit-share-card-body.classic {
+    border-left: 4px solid var(--background-modifier-border);
+    padding-left: 16px;
+}
+
+.readit-share-card-body.minimal {
+    opacity: 0.98;
+}
+
+/* Image-left layout */
+.readit-share-card-row {
+    display: flex;
+    gap: 16px;
+}
+
+.readit-share-card-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    width: 88px;
+}
+
+.readit-share-cover-lg {
+    width: 88px;
+    height: 88px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.readit-share-card-textwrap {
+    flex: 1 1 auto;
+    width: fit-content;
+}
+
+.readit-share-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 12px;
+}
+
+.readit-share-card-footer-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.readit-share-cover-sm {
+    width: 24px;
+    height: 24px;
+    object-fit: cover;
+    border-radius: 4px;
+}

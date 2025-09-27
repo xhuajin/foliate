@@ -1,0 +1,97 @@
+# ------------------------------
+# 依赖与日志（Node / pnpm）
+# ------------------------------
+node_modules/
+packages/foliate-js
+logs/
+*.log
+pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# ------------------------------
+# 构建产物与缓存（Vite / Rollup / TS）
+# ------------------------------
+# 通用构建目录
+dist/
+build/
+lib/
+
+# Vite 缓存
+.vite/
+node_modules/.vite/
+
+# 其它通用缓存临时目录
+.cache/
+tmp/
+temp/
+
+# TypeScript 增量/构建信息
+*.tsbuildinfo
+.rts2_cache_*/
+
+# 代码覆盖率
+coverage/
+.nyc_output/
+
+# ------------------------------
+# 项目特有产物（Obsidian 插件打包）
+# ------------------------------
+# Obsidian 插件通常生成的打包文件
+main.js
+main.js.map
+
+# 本项目在根目录下生成的 cjs 构建产物
+epub-*.cjs
+
+# 发行包（若本地打 zip 包，可以忽略）
+*.zip
+
+# ------------------------------
+# 子包/多包（packages/*）构建输出
+# ------------------------------
+packages/**/dist/
+packages/**/build/
+packages/**/.rollup.cache/
+packages/**/.vite/
+packages/**/node_modules/
+packages/**/*.tsbuildinfo
+
+# ------------------------------
+# 环境变量文件（保留示例文件）
+# ------------------------------
+.env
+.env.*
+!.env.example
+
+# ------------------------------
+# 操作系统杂项
+# ------------------------------
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+Desktop.ini
+
+# ------------------------------
+# 编辑器/IDE
+# ------------------------------
+.eslintcache
+.idea/
+*.iml
+
+# ------------------------------
+# obsidian 官方要求忽略的文件
+# ------------------------------
+main.js
+data.json
+main.js.map
+
+# 若要提交推荐的 VS Code 配置，可放开相应白名单
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json

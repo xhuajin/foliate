@@ -1,0 +1,1324 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { App, Notice, TFile } from 'obsidian';
+import {
+    appHasDailyNotesPluginLoaded,
+    createDailyNote,
+    getAllDailyNotes,
+    getDailyNote,
+} from 'obsidian-daily-notes-interface';
+import { EPUB } from 'foliate-js/epub.js';
+import type ReadItPlugin from '../main';
+import {
+    ContextMenu,
+    ContextMenuContent,
+    ContextMenuGroup,
+    ContextMenuItem,
+    ContextMenuSeparator,
+    ContextMenuTrigger,
+    ContextMenuSub,
+    ContextMenuSubContent,
+    ContextMenuSubTrigger,
+} from '../components/ui/context-menu';
+import {
+    Copy,
+    Search,
+    FileText,
+    Quote,
+    ArrowLeft,
+    ArrowRight,
+    ExternalLink,
+    Trash2,
+    List,
+    RefreshCcw,
+    Share,
+    SquarePen,
+} from 'lucide-react';
+import moment from 'moment';
+import { useExcerpts } from '../hooks/useExcerpts';
+import { useTocSync } from '../hooks/useTocSync';
+import { useRenderSection } from '../hooks/useRenderSection';
+import { useSectionNav } from '../hooks/useSectionNav';
+import { EPUB_VIEW_TYPE, EpubReaderView } from './EpubReaderView';
+import { ShareStyle, useShareSelection } from '../hooks/useShareSelection';
+import { s } from 'framer-motion/client';
+
+interface EpubViewerProps {
+    filePath: string;
+    fileName: string;
+    app: App; // 添加 app 参数以访问 Obsidian API
+    plugin: ReadItPlugin; // 添加插件实例
+}
+
+const EpubViewer: React.FC<EpubViewerProps> = ({
+    filePath,
+    fileName,
+    app, // 接收 app 参数
+    plugin, // 接收插件实例
+}) => {
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [book, setBook] = useState<any>(null);
+    const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+    const viewerRef = useRef<HTMLDivElement>(null);
+    // 章节标题与可见性跟踪
+    const [sectionTitle, setSectionTitle] = useState<string>('');
+    const [isHeadVisible, setIsHeadVisible] = useState<boolean>(false);
+    const headObserverRef = useRef<IntersectionObserver | null>(null);
+    const observedHeadElRef = useRef<Element | null>(null);
+
+    // 使用摘录/高亮 hook（用于渲染章节后高亮摘录）
+    const { applyHighlightsForSection } = useExcerpts(
+        app,
+        plugin,
+        filePath,
+        fileName,
+        book,
+        viewerRef
+    );
+
+    // 保存阅读进度
+    const saveProgress = async (sectionIndex: number) => {
+        if (filePath && plugin.settings.autoSaveProgress) {
+            // 提取书籍元数据
+            let metadata = undefined;
+            if (book?.metadata) {
+                // 安全地提取作者信息
+                let author = '';
+                if (book.metadata.creator) {
+                    if (typeof book.metadata.creator === 'string') {
+                        author = book.metadata.creator;
+                    } else if (book.metadata.creator.name) {
+                        author = book.metadata.creator.name;
+                    } else if (Array.isArray(book.metadata.creator)) {
+                        author = book.metadata.creator
+                            .map((c: any) =>
+                                typeof c === 'string' ? c : c.name || ''
+                            )
+                            .filter(Boolean)
+                            .join(', ');
+                    }
+                } else if (book.metadata.author) {
+                    if (typeof book.metadata.author === 'string') {
+                        author = book.metadata.author;
+                    } else if (book.metadata.author.name) {
+                        author = book.metadata.author.name;
+                    }
+                }
+
+                // 获取封面
+                let coverUrl = undefined;
+                if (book.getCover) {
+                    try {
+                        const coverBlob = await book.getCover();
+                        if (coverBlob) {
+                            // 将 Blob 转换为 base64 字符串
+                            const reader = new FileReader();
+                            coverUrl = await new Promise<string>(
+                                (resolve, reject) => {
+                                    reader.onload = () =>
+                                        resolve(reader.result as string);
+                                    reader.onerror = reject;
+                                    reader.readAsDataURL(coverBlob);
+                                }
+                            );
+                        }
+                    } catch (err) {
+                        console.warn('获取封面失败:', err);
+                    }
+                }
+
+                metadata = {
+                    title: book.metadata.title || fileName.replace('.epub', ''),
+                    ...(author && { author }),
+                    ...(book.metadata.publisher && {
+                        publisher: book.metadata.publisher,
+                    }),
+                    ...(book.metadata.language && {
+                        language: book.metadata.language,
+                    }),
+                    ...(book.metadata.description && {
+                        description: book.metadata.description,
+                    }),
+                    ...(book.metadata.subject && {
+                        subject: book.metadata.subject,
+                    }),
+                    ...(book.metadata.date && { date: book.metadata.date }),
+                    ...(book.metadata.identifier && {
+                        identifier: book.metadata.identifier,
+                    }),
+                    ...(coverUrl && { coverUrl }),
+                };
+            }
+
+            await plugin.saveReadingProgress({
+                filePath,
+                fileName,
+                sectionIndex,
+                scrollPosition: 0, // TODO: 实现滚动位置跟踪
+                lastRead: Date.now(),
+                totalSections: book?.sections?.length || 0,
+                ...(metadata && { metadata }), // 只在有元数据时添加字段
+            });
+        }
+    };
+
+    useEffect(() => {
+        const loadEpub = async () => {
+            try {
+                setIsLoading(true);
+
+                // 使用静态导入的 EPUB
+
+                // 使用 Obsidian API 读取文件
+
+                // 获取 TFile 实例
+                const tfile = app.vault
+                    .getFiles()
+                    .find((f) => f.path === filePath);
+                if (!tfile) {
+                    throw new Error(`文件未找到: ${filePath}`);
+                }
+                // 使用 vault.readBinary 读取二进制文件
+                const arrayBuffer = await app.vault.readBinary(tfile);
+                // 创建 ZIP loader（EPUB 文件是 ZIP 格式）
+                const {
+                    configure,
+                    ZipReader,
+                    BlobReader,
+                    TextWriter,
+                    BlobWriter,
+                } = (await import('foliate-js/vendor/zip.js')) as any;
+                configure({ useWebWorkers: false });
+
+                // 将 ArrayBuffer 转换为 Blob
+                const blob = new Blob([arrayBuffer], {
+                    type: 'application/epub+zip',
+                });
+                const reader = new ZipReader(new BlobReader(blob));
+                const entries = await reader.getEntries();
+                const map = new Map(
+                    entries.map((entry: any) => [entry.filename, entry])
+                );
+
+                const load =
+                    (f: any) =>
+                    (name: string, ...args: any[]) =>
+                        map.has(name) ? f(map.get(name), ...args) : null;
+                const loadText = load((entry: any) =>
+                    entry.getData(new TextWriter())
+                );
+                const loadBlob = load((entry: any, type?: string) =>
+                    entry.getData(new BlobWriter(type))
+                );
+                const getSize = (name: string) =>
+                    (map.get(name) as any)?.uncompressedSize ?? 0;
+
+                // 创建 SHA-1 函数（用于解密字体）
+                const sha1 = async (data: ArrayBuffer) => {
+                    const hashBuffer = await crypto.subtle.digest(
+                        'SHA-1',
+                        data
+                    );
+                    return Array.from(new Uint8Array(hashBuffer))
+                        .map((b) => b.toString(16).padStart(2, '0'))
+                        .join('');
+                };
+
+                const loader = { entries, loadText, loadBlob, getSize, sha1 };
+
+                // 使用正确的 API 创建 EPUB 实例
+                const epubInstance = new EPUB(loader);
+                const epub = await (epubInstance as any).init();
+                setBook(epub);
+
+                // 在EPUB加载完成后立即加载保存的进度
+                const progress = plugin.getReadingProgress(filePath);
+                if (progress && progress.sectionIndex) {
+                    setCurrentSectionIndex(progress.sectionIndex);
+                }
+
+                setIsLoading(false);
+            } catch (err) {
+                console.error('Error loading EPUB:', err);
+                setError(
+                    `加载 EPUB 文件失败: ${err instanceof Error ? err.message : String(err)}`
+                );
+                setIsLoading(false);
+            }
+        };
+
+        if (filePath && app) {
+            loadEpub();
+        }
+    }, [filePath, app]);
+
+    useEffect(() => {
+        if (book && viewerRef.current) {
+            // 初始化 foliate-js 阅读器
+            initializeReader();
+        }
+    }, [book]);
+
+    // 书籍加载完成或章节索引变化时，若 TOC 视图已打开，则自动切换为当前书籍的目录（静默，不切 tab）
+    useTocSync(app, book, currentSectionIndex, (index) => {
+        goToSection(index);
+    });
+
+    const toggleTOC = async () => {
+        if (book && plugin.openEpubTocView) {
+            // 确保左侧面板是打开的
+            const leftSplit = app.workspace.leftSplit;
+            if (leftSplit && leftSplit.collapsed) {
+                // 如果左侧面板是关闭的，先打开它
+                leftSplit.expand();
+            }
+
+            // 打开左侧边栏的目录视图
+            await plugin.openEpubTocView(
+                book,
+                currentSectionIndex,
+                (sectionIndex: number) => {
+                    // 目录中选择页面的回调
+                    goToSection(sectionIndex);
+                }
+            );
+        } else {
+            console.warn('无法打开目录：书籍或插件方法不可用');
+        }
+    };
+
+    // 章节渲染 hook
+    const { renderSection } = useRenderSection(
+        book,
+        viewerRef,
+        applyHighlightsForSection
+    );
+
+    // 在每次章节渲染后，抽取 h2.head 作为章节标题，并建立可见性监听
+    const updateHeadingTracking = React.useCallback(() => {
+        const getScrollRoot = (startEl: Element | null): Element | null => {
+            let el: Element | null = startEl as Element | null;
+            while (el && el !== document.documentElement) {
+                const style = window.getComputedStyle(el as Element);
+                const overflowY = style.overflowY;
+                const canScrollY =
+                    (overflowY === 'auto' || overflowY === 'scroll') &&
+                    (el as HTMLElement).scrollHeight >
+                        (el as HTMLElement).clientHeight;
+                if (canScrollY) return el;
+                el = el.parentElement;
+            }
+            return null; // 回退到视口
+        };
+        // 清理之前的观察器
+        if (headObserverRef.current) {
+            headObserverRef.current.disconnect();
+            headObserverRef.current = null;
+        }
+        observedHeadElRef.current = null;
+
+        const container = viewerRef.current?.querySelector(
+            '.epub-reader-content'
+        ) as HTMLElement | null;
+        if (!container) {
+            setSectionTitle('');
+            setIsHeadVisible(false);
+            return;
+        }
+
+        const headEl = container.querySelector('h2.head');
+        observedHeadElRef.current = headEl;
+
+        if (headEl) {
+            const text = (headEl.textContent || '').trim();
+            setSectionTitle(text);
+
+            // 寻找就近可滚动祖先作为观察根（root）
+            const rootEl =
+                getScrollRoot(headEl) || getScrollRoot(container) || null;
+
+            // 先同步计算一次初始可见性，降低闪烁
+            try {
+                const headRect = headEl.getBoundingClientRect();
+                let visible = false;
+                if (!rootEl) {
+                    const vh =
+                        window.innerHeight ||
+                        document.documentElement.clientHeight;
+                    const vw =
+                        window.innerWidth ||
+                        document.documentElement.clientWidth;
+                    const vRect = {
+                        top: 0,
+                        left: 0,
+                        bottom: vh,
+                        right: vw,
+                    } as const;
+                    visible =
+                        headRect.bottom > vRect.top &&
+                        headRect.top < vRect.bottom;
+                } else {
+                    const rRect = rootEl.getBoundingClientRect();
+                    visible =
+                        headRect.bottom > rRect.top &&
+                        headRect.top < rRect.bottom;
+                }
+                setIsHeadVisible(visible);
+            } catch {}
+
+            // 观察该标题是否在可视范围内可见
+            const observer = new IntersectionObserver(
+                (entries) => {
+                    const entry = entries[0];
+                    setIsHeadVisible(!!entry?.isIntersecting);
+                },
+                {
+                    root: rootEl, // 根据实际滚动根选择容器或视口
+                    threshold: [0, 0.01, 1],
+                }
+            );
+            observer.observe(headEl);
+            headObserverRef.current = observer;
+        } else {
+            // 未找到章节内标题，回退为显示头部并使用书名/文件名
+            setSectionTitle('');
+            setIsHeadVisible(false);
+        }
+    }, []);
+
+    // 包装 renderSection：渲染后刷新标题与可见性跟踪
+    const renderSectionWithUpdate = React.useCallback(
+        async (index: number) => {
+            await renderSection(index);
+            updateHeadingTracking();
+        },
+        [renderSection, updateHeadingTracking]
+    );
+
+    // 导航 hook
+    const { goToSection } = useSectionNav(
+        app,
+        book,
+        viewerRef,
+        renderSectionWithUpdate,
+        saveProgress,
+        setCurrentSectionIndex
+    );
+
+    // 本地 renderSection 已由 useRenderSection 提供
+
+    const [selectedText, setSelectedText] = useState<string>('');
+    const [contextHighlight, setContextHighlight] = useState<{
+        node: HTMLElement | null;
+        sourceFile?: string;
+    } | null>(null);
+
+    useEffect(() => {
+        const handleSelectionChange = () => {
+            const selection = window.getSelection();
+            setSelectedText(selection ? selection.toString().trim() : '');
+        };
+
+        document.addEventListener('selectionchange', handleSelectionChange);
+        return () => {
+            document.removeEventListener(
+                'selectionchange',
+                handleSelectionChange
+            );
+        };
+    }, []);
+
+    const goToPrevSection = async () => {
+        if (currentSectionIndex > 0) {
+            const newIndex = currentSectionIndex - 1;
+            await goToSection(newIndex);
+        }
+    };
+
+    const goToNextSection = async () => {
+        if (book?.sections && currentSectionIndex < book.sections.length - 1) {
+            const newIndex = currentSectionIndex + 1;
+            await goToSection(newIndex);
+        }
+    };
+
+    const refreshSection = async () => {
+        // 使用 obsidian 的 api，重新打开这个 epub
+        if (filePath) {
+            const file = app.vault.getFileByPath(filePath) as TFile;
+            // 检查是否已经有这个特定文件的视图打开
+            const existingLeaf = app.workspace
+                .getLeavesOfType(EPUB_VIEW_TYPE)
+                .find((leaf) => {
+                    const view = leaf.view as EpubReaderView;
+                    return view && view.file?.path === file.path;
+                });
+
+            if (existingLeaf) {
+                // 如果已经打开了相同文件，就关闭这个视图，然后重新打开
+                existingLeaf.detach();
+            }
+
+            // 创建新的叶子节点并打开视图
+            const leaf = app.workspace.getLeaf('tab');
+
+            // 设置叶子节点的视图类型
+            await leaf.setViewState({
+                type: EPUB_VIEW_TYPE,
+                active: true,
+            });
+
+            // 获取创建的视图并设置文件信息
+            const view = leaf.view as EpubReaderView;
+            if (view && view.setFileInfo) {
+                view.setFileInfo(file.path, file.name);
+            } else {
+                console.error('视图创建失败或没有 setFileInfo 方法');
+            }
+        }
+    };
+
+    // 上下文菜单操作函数 - 直接获取当前选中的文本
+    const getCurrentSelectedText = () => {
+        const selection = window.getSelection();
+        return selection ? selection.toString().trim() : '';
+    };
+
+    const copyText = () => {
+        const selectedText = getCurrentSelectedText();
+        if (selectedText) {
+            navigator.clipboard.writeText(selectedText);
+        }
+    };
+
+    const searchText = () => {
+        const selectedText = getCurrentSelectedText();
+        if (selectedText) {
+            // 在Obsidian中搜索选中的文本 - 使用简单的方法
+            const searchLeaf = app.workspace.getLeavesOfType('search')[0];
+            if (searchLeaf) {
+                (searchLeaf.view as any).searchComponent?.setValue(
+                    selectedText
+                );
+                app.workspace.revealLeaf(searchLeaf);
+            } else {
+                // 如果搜索面板未打开，尝试执行搜索命令
+                (app as any).commands.executeCommandById('global-search:open');
+            }
+        }
+    };
+
+    // 右键菜单：若针对高亮，解析并缓存目标信息
+    const onContainerContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
+        const target = e.target as HTMLElement | null;
+        if (!target) {
+            setContextHighlight(null);
+            return;
+        }
+        const hl = target.closest('.epub-highlight') as HTMLElement | null;
+        if (hl) {
+            const sourceFile = hl.getAttribute('data-source-file');
+            if (sourceFile) setContextHighlight({ node: hl, sourceFile });
+            else setContextHighlight({ node: hl });
+        } else {
+            setContextHighlight(null);
+        }
+    };
+
+    const copyHighlightFileContent = async () => {
+        const path = contextHighlight?.sourceFile;
+        if (!path) return;
+        const f = app.vault.getAbstractFileByPath(path);
+        if (f && f instanceof TFile) {
+            const content = await app.vault.read(f);
+            // 去除文件开头的 YAML frontmatter（如果存在）
+            const stripped = (() => {
+                // 常见形式：---\n...\n---\n 置于文件最前
+                if (content.startsWith('---')) {
+                    const match = content.match(/^---\s*\n[\s\S]*?\n---\s*\n?/);
+                    if (match) return content.slice(match[0].length);
+                }
+                // 兼容分隔法：split('---')
+                if (content.startsWith('---')) {
+                    const parts = content.split(/\n---\s*\n/);
+                    if (parts.length > 1) {
+                        // parts[0] 仍含起始 '---' 行，截去头两段
+                        const after = content.replace(
+                            /^---[\s\S]*?\n---\s*\n?/,
+                            ''
+                        );
+                        return after;
+                    }
+                }
+                return content;
+            })();
+            await navigator.clipboard.writeText(stripped);
+            new Notice('已复制摘录文件内容');
+        } else {
+            new Notice('未找到摘录文件');
+        }
+    };
+
+    const openHighlightFile = async () => {
+        const path = contextHighlight?.sourceFile;
+        if (!path) return;
+        const f = app.vault.getAbstractFileByPath(path);
+        if (f && f instanceof TFile) {
+            app.workspace.openLinkText(path, '', false);
+        } else {
+            new Notice('未找到摘录文件');
+        }
+    };
+
+    const unwrapNode = (el: HTMLElement) => {
+        const parent = el.parentNode;
+        if (!parent) return;
+        while (el.firstChild) parent.insertBefore(el.firstChild, el);
+        parent.removeChild(el);
+    };
+
+    const isSingleExcerptNote = (path: string) =>
+        /\s摘录\s\d{8}-\d{6}\.md$/i.test(path);
+
+    const deleteHighlightAndFile = async () => {
+        const node = contextHighlight?.node;
+        const path = contextHighlight?.sourceFile;
+        if (!node) return;
+
+        // 先去掉所有同源高亮，保持一致性
+        const container = viewerRef.current?.querySelector(
+            '.epub-reader-content'
+        ) as HTMLElement | null;
+        if (container) {
+            const escaped =
+                (window as any).CSS &&
+                typeof (window as any).CSS.escape === 'function'
+                    ? (window as any).CSS.escape(path || '')
+                    : (path || '').replace(/"/g, '\\"');
+            const selector = path
+                ? `.epub-highlight[data-source-file="${escaped}"]`
+                : '.epub-highlight';
+            const all = Array.from(
+                container.querySelectorAll(selector)
+            ) as HTMLElement[];
+            for (const el of all) unwrapNode(el);
+        } else {
+            unwrapNode(node);
+        }
+
+        // 删除摘录文件，仅针对“单摘录文件”安全执行
+        if (path) {
+            if (!isSingleExcerptNote(path)) {
+                new Notice('当前摘录来源于合并文件，仅移除高亮，不删除文件');
+                return;
+            }
+            const f = app.vault.getAbstractFileByPath(path);
+            if (f && f instanceof TFile) {
+                try {
+                    await app.vault.delete(f);
+                    new Notice('已删除摘录文件');
+                } catch (err) {
+                    console.error('删除摘录文件失败:', err);
+                    new Notice('删除摘录文件失败');
+                }
+            }
+        }
+    };
+
+    // 立即高亮当前在阅读区域内的选区
+    const highlightSelectionInViewer = (targetFilePath?: string) => {
+        const container = viewerRef.current?.querySelector(
+            '.epub-reader-content'
+        ) as HTMLElement | null;
+        if (!container) return false;
+
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return false;
+        const range = sel.getRangeAt(0);
+
+        // 仅在选区位于阅读容器内时处理
+        const isInside = (node: Node | null): boolean => {
+            if (!node || !container) return false;
+            const el =
+                node.nodeType === Node.TEXT_NODE
+                    ? (node as Text).parentElement
+                    : (node as HTMLElement);
+            return !!el && container.contains(el);
+        };
+        if (!isInside(range.startContainer) || !isInside(range.endContainer))
+            return false;
+
+        // 创建统一的 wrapper（附带来源与点击跳转）
+        const createWrapper = () => {
+            const wrapper = document.createElement('span');
+            wrapper.className = 'epub-highlight';
+            if (targetFilePath) {
+                wrapper.setAttribute('data-source-file', targetFilePath);
+                (wrapper as HTMLElement).style.cursor = 'pointer';
+                wrapper.onclick = (e) => {
+                    e.stopPropagation();
+                    const f = app.vault.getAbstractFileByPath(targetFilePath);
+                    if (f && f instanceof TFile) {
+                        app.workspace.openLinkText(targetFilePath, '', false);
+                    }
+                };
+            }
+            return wrapper;
+        };
+
+        // 在选区公共祖先下遍历文本节点，按交集拆分包裹，避免跨 block
+        const root: Node =
+            range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+                ? range.commonAncestorContainer
+                : (range.commonAncestorContainer.parentElement ?? container);
+
+        const walker = document.createTreeWalker(
+            root as Node,
+            NodeFilter.SHOW_TEXT,
+            {
+                acceptNode: (node: any) => {
+                    if (!node?.nodeValue || !node.nodeValue.trim())
+                        return NodeFilter.FILTER_REJECT;
+                    // 限定必须在阅读容器内
+                    if (!container.contains((node as Text).parentElement!))
+                        return NodeFilter.FILTER_REJECT;
+                    // 仅处理与选区相交的文本节点
+                    try {
+                        return (range as any).intersectsNode(node)
+                            ? NodeFilter.FILTER_ACCEPT
+                            : NodeFilter.FILTER_REJECT;
+                    } catch {
+                        // 某些环境下 intersectsNode 不存在，退化为范围判断
+                        const nodeRange = document.createRange();
+                        nodeRange.selectNodeContents(node);
+                        const intersects =
+                            range.compareBoundaryPoints(
+                                Range.END_TO_START,
+                                nodeRange
+                            ) < 0 &&
+                            range.compareBoundaryPoints(
+                                Range.START_TO_END,
+                                nodeRange
+                            ) > 0;
+                        nodeRange.detach?.();
+                        return intersects
+                            ? NodeFilter.FILTER_ACCEPT
+                            : NodeFilter.FILTER_REJECT;
+                    }
+                },
+            } as any
+        );
+
+        type Piece = { node: Text; start: number; end: number };
+        const pieces: Piece[] = [];
+        while (walker.nextNode()) {
+            const node = walker.currentNode as Text;
+            let start = 0;
+            let end = node.nodeValue!.length;
+
+            if (node === range.startContainer) start = range.startOffset;
+            if (node === range.endContainer) end = range.endOffset;
+
+            if (start < end) pieces.push({ node, start, end });
+        }
+
+        if (pieces.length === 0) return false;
+
+        // 从后往前拆分替换，避免索引失效
+        for (let i = pieces.length - 1; i >= 0; i--) {
+            const piece = pieces[i];
+            if (!piece) continue;
+
+            const { node, start, end } = piece;
+            const text = node.nodeValue || '';
+            const before = text.slice(0, start);
+            const middle = text.slice(start, end);
+            const after = text.slice(end);
+
+            const frag = document.createDocumentFragment();
+            if (before) frag.appendChild(document.createTextNode(before));
+            const span = createWrapper();
+            span.appendChild(document.createTextNode(middle));
+            frag.appendChild(span);
+            if (after) frag.appendChild(document.createTextNode(after));
+
+            node.parentNode!.replaceChild(frag, node);
+        }
+
+        // 清理选区，避免残留蓝色选中态
+        try {
+            sel.removeAllRanges();
+        } catch {}
+        return true;
+    };
+
+    const createNote = async () => {
+        const selection = window.getSelection();
+        const text = selection ? selection.toString().trim() : '';
+        if (!selection || selection.rangeCount === 0 || selection.isCollapsed)
+            return;
+        const range = selection.getRangeAt(0);
+        if (!text) return;
+
+        const mode = plugin.settings.excerptStorageMode;
+        switch (mode) {
+            // 使用日记模式
+            case 'daily-note': {
+                if (appHasDailyNotesPluginLoaded()) {
+                    const date = moment();
+                    const allDailyNotes = getAllDailyNotes();
+                    let dailyNote = getDailyNote(date, allDailyNotes);
+                    const head = `\n- ${date.format('HH:mm')} `;
+                    const content = text.split('\n').join('\n    ');
+                    const footer = `\n    摘录 · 《${book?.metadata?.title || fileName}》第${currentSectionIndex + 1}页 #摘录/${book?.metadata?.title || ''}\n`;
+                    const appendText = head + content + footer;
+                    if (dailyNote) {
+                        await app.vault.append(dailyNote, appendText);
+                        highlightSelectionInViewer(dailyNote.path);
+                        if (plugin.settings.excerptSuccessNotification) {
+                            new Notice(`已摘录到${dailyNote.name}`);
+                        }
+                    } else {
+                        dailyNote = await createDailyNote(date);
+                        if (dailyNote) {
+                            await app.vault.append(dailyNote, appendText);
+                            highlightSelectionInViewer(dailyNote.path);
+                            if (plugin.settings.excerptSuccessNotification) {
+                                new Notice(`已创建并添加到${dailyNote.name}`);
+                            }
+                        } else {
+                            new Notice('无法创建今日笔记');
+                        }
+                    }
+                }
+                break;
+            }
+            // 每个摘录单独一个文件
+            case 'per-note': {
+                const baseName = fileName.replace(/\.epub$/i, '') || '摘录';
+                const dir = filePath.includes('/')
+                    ? filePath.substring(0, filePath.lastIndexOf('/'))
+                    : '';
+                const date = moment();
+                const noteFolderPath = `${dir ? dir + '/' : ''}${baseName}`;
+                const noteFileName = `${baseName} 摘录 ${date.format('YYYYMMDD-HHmmss')}.md`;
+                const notePath = `${noteFolderPath}/${noteFileName}`;
+                const metadata = {
+                    book: book?.metadata?.title || baseName,
+                    section: currentSectionIndex + 1,
+                    date: date.format('YYYY-MM-DD HH:mm'),
+                    source: fileName,
+                    range: range,
+                    tags: `[摘录, ${book?.metadata?.title || baseName}]`,
+                };
+                const metaLines = Object.entries(metadata).map(
+                    ([key, value]) => `${key}: ${value}`
+                );
+                const frontMatter = `---\n${metaLines.join('\n')}\n---\n`;
+                const content =
+                    frontMatter +
+                    text +
+                    `\n\n> 《${metadata.book}》 · 第${metadata.section}页 #摘录/${metadata.book}\n`;
+
+                try {
+                    if (!(await app.vault.adapter.exists(noteFolderPath))) {
+                        await app.vault.createFolder(noteFolderPath);
+                    }
+                    await app.vault.create(notePath, content);
+                    highlightSelectionInViewer(notePath);
+                    if (plugin.settings.excerptSuccessNotification) {
+                        new Notice(`已创建摘录：${noteFileName}`);
+                    }
+                    return notePath;
+                } catch (err) {
+                    console.error('创建摘录失败:', err);
+                    new Notice('创建摘录失败，请查看控制台');
+                }
+                break;
+            }
+
+            case 'per-book': {
+                // 构建同目录、同名的 Markdown 文件路径
+                const baseName = fileName.replace(/\.epub$/i, '') || '摘录';
+                const dir = filePath.includes('/')
+                    ? filePath.substring(0, filePath.lastIndexOf('/'))
+                    : '';
+                const mdPath = `${dir ? dir + '/' : ''}${baseName}.md`;
+
+                // 生成追加内容（带时间与相关信息）
+                const now = new Date();
+                const timeStr = `${now.getFullYear()}-${String(
+                    now.getMonth() + 1
+                ).padStart(
+                    2,
+                    '0'
+                )}-${String(now.getDate()).padStart(2, '0')} ${String(
+                    now.getHours()
+                ).padStart(
+                    2,
+                    '0'
+                )}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+                const header = `\n\n> [!note] ${book?.metadata?.title} · 第${currentSectionIndex + 1}页 · ${timeStr} \n`;
+                const entry = `\n\n> [!note] ${book?.metadata?.title} · 第${currentSectionIndex + 1}页 · ${timeStr} \n> ${text.split('\n').join('\n> ')}\n> #摘录/${book?.metadata?.title}`;
+
+                try {
+                    const existing = app.vault.getAbstractFileByPath(mdPath);
+                    if (existing && existing instanceof TFile) {
+                        await app.vault.append(existing, entry);
+                        highlightSelectionInViewer(mdPath);
+                        if (plugin.settings.excerptSuccessNotification) {
+                            new Notice(`已追加到摘录：${baseName}.md`);
+                        }
+                    } else {
+                        await app.vault.create(mdPath, header + entry + '\n');
+                        highlightSelectionInViewer(mdPath);
+                        if (plugin.settings.excerptSuccessNotification) {
+                            new Notice(`已创建摘录文件并追加：${baseName}.md`);
+                        }
+                    }
+
+                    // 保存映射到 settings（按 filePath 标识该书）
+                    const map = plugin.settings.perBookExcerptMap || {};
+                    map[filePath] = mdPath;
+                    plugin.settings.perBookExcerptMap = map;
+                    await plugin.saveSettings();
+                } catch (err) {
+                    console.error('写入摘录失败:', err);
+                    new Notice('写入摘录失败，请查看控制台');
+                }
+                break;
+            }
+
+            case 'single-note': {
+                // 使用单一文件收集所有摘录；默认放在库根目录下 _ReadIt_摘录.md
+                let notePath =
+                    plugin.settings.singleExcerptPath || '_ReadIt_摘录.md';
+
+                const now = new Date();
+                const timeStr = `${now.getFullYear()}-${String(
+                    now.getMonth() + 1
+                ).padStart(2, '0')}-${String(now.getDate()).padStart(
+                    2,
+                    '0'
+                )} ${String(now.getHours()).padStart(2, '0')}:${String(
+                    now.getMinutes()
+                ).padStart(2, '0')}`;
+
+                const header = `\n\n> [!note] ${book?.metadata?.title} · 第${currentSectionIndex + 1}页 · ${timeStr} \n`;
+                const entry = `\n\n> [!note] ${book?.metadata?.title} · 第${currentSectionIndex + 1}页 · ${timeStr} \n> ${text.split('\n').join('\n> ')}\n> #摘录/${book?.metadata?.title}`;
+
+                try {
+                    const existing = app.vault.getAbstractFileByPath(notePath);
+                    if (existing && existing instanceof TFile) {
+                        await app.vault.append(existing, entry);
+                        highlightSelectionInViewer(notePath);
+                    } else {
+                        await app.vault.create(notePath, header + entry + '\n');
+                        highlightSelectionInViewer(notePath);
+                    }
+                    // 持久化路径
+                    if (!plugin.settings.singleExcerptPath) {
+                        plugin.settings.singleExcerptPath = notePath;
+                        await plugin.saveSettings();
+                    }
+                    if (plugin.settings.excerptSuccessNotification) {
+                        new Notice('已追加到统一摘录文件');
+                    }
+                } catch (err) {
+                    console.error('写入摘录失败:', err);
+                    new Notice('写入摘录失败，请查看控制台');
+                }
+                break;
+            }
+        }
+    };
+
+    const addToQuickCapture = () => {
+        const selectedText = getCurrentSelectedText();
+        if (selectedText) {
+            // 添加到快速捕获（如果有相关插件）
+            const quote = `"${selectedText}" - 《${book?.metadata?.title || fileName}》第${currentSectionIndex + 1}页`;
+
+            // 尝试写入剪贴板，用户可以手动粘贴
+            navigator.clipboard.writeText(quote);
+
+            // 显示通知
+            if ((app as any).notice) {
+                new (app as any).Notice('摘录已复制到剪贴板');
+            }
+        }
+    };
+
+    // 分享 Hook
+    const { shareSelection, shareText, isSharing } = useShareSelection({
+        app,
+        plugin,
+        viewerRef,
+        book,
+        fileName,
+        currentSectionIndex,
+    });
+
+    const initializeReader = async () => {
+        if (!book || !viewerRef.current) return;
+
+        try {
+            // 清空容器
+            viewerRef.current.innerHTML = '';
+
+            // 检查是否有内容
+            if (!book.sections || book.sections.length === 0) {
+                viewerRef.current.innerHTML =
+                    '<div class="p-4 text-center text-red-500">没有找到EPUB内容</div>';
+                return;
+            }
+
+            // 创建简单的阅读器容器
+            const readerContainer = document.createElement('div');
+            readerContainer.className = 'epub-reader-content';
+            readerContainer.style.cssText = `
+                width: 100%;
+                height: 100%;
+                background: transparent;
+                color: var(--text-normal);
+                font-family: ${plugin.settings.fontFamily};
+                font-size: ${plugin.settings.fontSize}px;
+                line-height: ${plugin.settings.lineHeight};
+                max-width: ${plugin.settings.pageWidth}px;
+                margin: 0 auto;
+                position: relative;
+            `;
+
+            viewerRef.current.appendChild(readerContainer);
+
+            // 渲染当前页面（可能是从保存的进度恢复的）
+            await renderSectionWithUpdate(currentSectionIndex);
+        } catch (err) {
+            console.error('Error initializing reader:', err);
+            if (viewerRef.current) {
+                viewerRef.current.innerHTML = `<div class="p-4 text-center text-red-500">初始化失败: ${err instanceof Error ? err.message : String(err)}</div>`;
+            }
+            setError(
+                'Failed to initialize EPUB reader: ' +
+                    (err instanceof Error ? err.message : String(err))
+            );
+        }
+    };
+
+    // 组件卸载时清理观察器
+    useEffect(() => {
+        return () => {
+            if (headObserverRef.current) {
+                headObserverRef.current.disconnect();
+                headObserverRef.current = null;
+            }
+            observedHeadElRef.current = null;
+        };
+    }, []);
+
+    if (isLoading) {
+        return (
+            <div className="epub-content">
+                <div className="flex items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                    <span className="ml-4 text-lg">Loading EPUB...</span>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="epub-viewer-container">
+                <div className="epub-header">
+                    <h2 className="text-xl font-bold text-red-500">Error</h2>
+                </div>
+                <div className="epub-content">
+                    <div className="text-center text-red-500 p-8">
+                        <p className="text-lg">{error}</p>
+                        <p className="text-sm mt-2">File: {filePath}</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="epub-viewer-container">
+            <div className="epub-viewer-header flex h-(--header-height) items-center justify-center">
+                <div
+                    className={
+                        'epub-header-title transition-opacity duration-200 ' +
+                        (isHeadVisible ? 'opacity-0' : 'opacity-100')
+                    }
+                >
+                    {sectionTitle || book?.metadata?.title || fileName}
+                </div>
+                <div className="epub-header-controls">
+                    <button className="readit-button" onClick={toggleTOC}>
+                        目录
+                    </button>
+                    <button
+                        className="readit-button"
+                        onClick={goToPrevSection}
+                        disabled={currentSectionIndex === 0}
+                    >
+                        上一页
+                    </button>
+                    <button
+                        className="readit-button"
+                        onClick={goToNextSection}
+                        disabled={
+                            !book?.sections ||
+                            currentSectionIndex >= book.sections.length - 1
+                        }
+                    >
+                        下一页
+                    </button>
+                </div>
+            </div>
+
+            {/* 用于定位，在点击下一页时滚动到顶部 */}
+            <div className="epub-content-top"></div>
+
+            <div className="epub-content h-full">
+                {/* foliate-js 渲染区域 */}
+                <ContextMenu>
+                    <ContextMenuTrigger>
+                        <div
+                            ref={viewerRef}
+                            className="epub-reader-container h-full select-text relative"
+                            onContextMenu={onContainerContextMenu}
+                        >
+                            {!book && (
+                                <div className="flex items-center justify-center h-full">
+                                    <div className="text-center text-gray-500">
+                                        等待加载 EPUB 文件...
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent className="w-38">
+                        {!selectedText && !contextHighlight && (
+                            <>
+                                <ContextMenuGroup className="flex justify-evenly items-center">
+                                    <ContextMenuItem
+                                        title="上一页"
+                                        onClick={goToPrevSection}
+                                        disabled={currentSectionIndex === 0}
+                                    >
+                                        <ArrowLeft />
+                                    </ContextMenuItem>
+                                    <ContextMenuItem
+                                        title="下一页"
+                                        onClick={goToNextSection}
+                                        disabled={
+                                            currentSectionIndex ===
+                                            (book?.sections.length || 1) - 1
+                                        }
+                                    >
+                                        <ArrowRight />
+                                    </ContextMenuItem>
+                                    <ContextMenuItem
+                                        title="跳转至目录"
+                                        onClick={toggleTOC}
+                                        disabled={!book?.toc}
+                                    >
+                                        <List />
+                                    </ContextMenuItem>
+                                    <ContextMenuItem
+                                        title="刷新"
+                                        onClick={refreshSection}
+                                    >
+                                        <RefreshCcw />
+                                    </ContextMenuItem>
+                                </ContextMenuGroup>
+                                <ContextMenuSeparator />
+                            </>
+                        )}
+                        {!contextHighlight && (
+                            <>
+                                <ContextMenuItem
+                                    onClick={copyText}
+                                    disabled={
+                                        !selectedText ||
+                                        selectedText.length === 0
+                                    }
+                                >
+                                    <Copy /> 复制文本
+                                </ContextMenuItem>
+                                <ContextMenuItem
+                                    onClick={addToQuickCapture}
+                                    disabled={
+                                        !selectedText ||
+                                        selectedText.length === 0
+                                    }
+                                >
+                                    <Quote /> 带引用复制
+                                </ContextMenuItem>
+                                <ContextMenuItem
+                                    onClick={createNote}
+                                    disabled={
+                                        !selectedText ||
+                                        selectedText.length === 0
+                                    }
+                                >
+                                    <FileText /> 摘录
+                                </ContextMenuItem>
+                                <ContextMenuItem
+                                    onClick={async () => {
+                                        const notePath = await createNote();
+                                        if (notePath) {
+                                            // 稍后打开新建的摘录文件
+                                            const noteFile =
+                                                app.vault.getFileByPath(
+                                                    notePath
+                                                );
+                                            if (noteFile) {
+                                                const leaf =
+                                                    app.workspace.openPopoutLeaf();
+                                                await leaf.openFile(noteFile);
+                                            }
+                                        }
+                                    }}
+                                    disabled={
+                                        !selectedText ||
+                                        selectedText.length === 0
+                                    }
+                                >
+                                    <SquarePen /> 摘录并跳转
+                                </ContextMenuItem>
+                            </>
+                        )}
+                        {contextHighlight && (
+                            <>
+                                <ContextMenuItem
+                                    onClick={copyHighlightFileContent}
+                                    disabled={!contextHighlight.sourceFile}
+                                >
+                                    <Copy /> 复制摘录
+                                </ContextMenuItem>
+                                <ContextMenuItem
+                                    onClick={openHighlightFile}
+                                    disabled={!contextHighlight.sourceFile}
+                                >
+                                    <ExternalLink /> 跳转至文件
+                                </ContextMenuItem>
+                            </>
+                        )}
+
+                        {/* 分享：生成分享卡片 */}
+                        <ContextMenuSub>
+                            <ContextMenuSubTrigger
+                                disabled={
+                                    isSharing ||
+                                    (!selectedText && !contextHighlight)
+                                }
+                            >
+                                <Share />{' '}
+                                {isSharing
+                                    ? '生成中…'
+                                    : selectedText
+                                      ? '分享文本'
+                                      : '分享摘录'}
+                            </ContextMenuSubTrigger>
+                            <ContextMenuSubContent className="w-38">
+                                {[
+                                    {
+                                        key: 'classic',
+                                        value: '经典样式',
+                                    },
+                                    {
+                                        key: 'minimal',
+                                        value: '极简样式',
+                                    },
+                                    {
+                                        key: 'image-left',
+                                        value: '左图右文',
+                                    },
+                                ].map(({ key, value }) => (
+                                    <ContextMenuItem
+                                        key={key}
+                                        onClick={async () => {
+                                            let text = selectedText;
+                                            if (text) {
+                                                shareText(
+                                                    text,
+                                                    key as ShareStyle
+                                                );
+                                            } else if (
+                                                contextHighlight &&
+                                                contextHighlight.sourceFile
+                                            ) {
+                                                text = await app.vault.adapter
+                                                    .read(
+                                                        contextHighlight.sourceFile
+                                                    )
+                                                    .then((content) => {
+                                                        if (
+                                                            content.startsWith(
+                                                                '---'
+                                                            )
+                                                        ) {
+                                                            return content
+                                                                .replace(
+                                                                    /^---[\s\S]*?\n---\s*\n?/,
+                                                                    ''
+                                                                )
+                                                                .trim();
+                                                        } else {
+                                                            return content.trim();
+                                                        }
+                                                    });
+
+                                                if (text)
+                                                    shareText(
+                                                        text,
+                                                        key as ShareStyle
+                                                    );
+                                            } else {
+                                                new Notice('没有可分享的内容');
+                                                return;
+                                            }
+                                        }}
+                                    >
+                                        {value}
+                                    </ContextMenuItem>
+                                ))}
+                            </ContextMenuSubContent>
+                        </ContextMenuSub>
+
+                        {selectedText && (
+                            <ContextMenuItem
+                                onClick={searchText}
+                                disabled={
+                                    !selectedText || selectedText.length === 0
+                                }
+                            >
+                                <Search /> 在库中搜索
+                            </ContextMenuItem>
+                        )}
+                        {contextHighlight && (
+                            <ContextMenuItem
+                                onClick={deleteHighlightAndFile}
+                                disabled={
+                                    !contextHighlight.sourceFile ||
+                                    !isSingleExcerptNote(
+                                        contextHighlight.sourceFile
+                                    )
+                                }
+                                variant="destructive"
+                            >
+                                <Trash2 /> 删除摘录
+                            </ContextMenuItem>
+                        )}
+                    </ContextMenuContent>
+                </ContextMenu>
+            </div>
+        </div>
+    );
+};
+
+export default EpubViewer;
