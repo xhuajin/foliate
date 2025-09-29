@@ -16,7 +16,7 @@ interface CoverFlowItem {
               description?: string;
               language?: string;
               publisher?: string;
-              subject?: string;
+              subject?: string[];
               coverUrl?: string;
           }
         | undefined;
@@ -273,23 +273,22 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
                     <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
                             {items[activeIndex].metadata?.description && (
-                                <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-break-spaces">
+                                <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-break-spaces select-text max-h-40 truncate">
                                     {items[activeIndex].metadata.description}
                                 </p>
                             )}
                             {items[activeIndex].metadata?.subject && (
                                 <div className="relative h-96 overflow-hidden-wrap gap-1 mt-2">
-                                    {items[activeIndex].metadata.subject
-                                        .split(',')
-                                        .slice(0, 3)
-                                        .map((tag, idx) => (
+                                    {items[activeIndex].metadata?.subject.map(
+                                        (tag, idx) => (
                                             <span
                                                 key={idx}
                                                 className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full"
                                             >
                                                 {tag.trim()}
                                             </span>
-                                        ))}
+                                        )
+                                    )}
                                 </div>
                             )}
                         </div>

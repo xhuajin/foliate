@@ -12,6 +12,7 @@ import {
 } from '../components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { BringToFront, LayoutPanelLeft } from 'lucide-react';
+import { t } from '@/lang/helpers';
 
 export const READING_HISTORY_VIEW_TYPE = 'reading-history-view';
 
@@ -34,13 +35,18 @@ const ReadingHistory: React.FC<ReadingHistoryProps> = ({
         const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
         if (diffDays === 0) {
-            return '今天';
+            return t('today');
         } else if (diffDays === 1) {
-            return '昨天';
+            return t('yesterday');
         } else if (diffDays < 7) {
-            return `${diffDays}天前`;
+            return `${diffDays}${t('daysAgo_suffix')}`;
         } else {
-            return date.toLocaleDateString('zh-CN');
+            const lang = (
+                localStorage.getItem('language') || 'en'
+            ).toLowerCase();
+            const localeStr =
+                lang === 'zh' || lang === 'zh-cn' ? 'zh-CN' : 'en-US';
+            return date.toLocaleDateString(localeStr);
         }
     };
 
@@ -72,11 +78,21 @@ const ReadingHistory: React.FC<ReadingHistoryProps> = ({
         status: getBookStatus(book),
         metadata: book.metadata
             ? {
-                  ...(book.metadata.description && { description: book.metadata.description }),
-                  ...(book.metadata.language && { language: book.metadata.language }),
-                  ...(book.metadata.published && { publisher: book.metadata.published }),
-                  ...(book.metadata.subject && { subject: book.metadata.subject }),
-                  ...(book.metadata.coverUrl && { coverUrl: book.metadata.coverUrl }),
+                  ...(book.metadata.description && {
+                      description: book.metadata.description,
+                  }),
+                  ...(book.metadata.language && {
+                      language: book.metadata.language,
+                  }),
+                  ...(book.metadata.published && {
+                      publisher: book.metadata.published,
+                  }),
+                  ...(book.metadata.subject && {
+                      subject: book.metadata.subject,
+                  }),
+                  ...(book.metadata.coverUrl && {
+                      coverUrl: book.metadata.coverUrl,
+                  }),
               }
             : undefined,
         onClick: () => onOpenBook(book.filePath),
@@ -86,13 +102,13 @@ const ReadingHistory: React.FC<ReadingHistoryProps> = ({
         return (
             <div className="reading-history-container">
                 <div className="reading-history-header">
-                    <h1>我的阅读历史</h1>
-                    <p>还没有阅读记录</p>
+                    <h1>{t('myReadingHistory')}</h1>
+                    <p>{t('noReadingRecord')}</p>
                 </div>
                 <div className="empty-state">
                     <div className="empty-icon">📚</div>
-                    <h2>开始你的阅读之旅</h2>
-                    <p>在Obsidian中打开任意EPUB文件开始阅读</p>
+                    <h2>{t('startYourJourney')}</h2>
+                    <p>{t('openAnyEpub')}</p>
                 </div>
             </div>
         );
@@ -199,7 +215,7 @@ export class ReadingHistoryView extends ItemView {
     }
 
     getDisplayText(): string {
-        return '阅读历史';
+        return t('readingHistory');
     }
 
     override getIcon(): string {
@@ -234,7 +250,7 @@ export class ReadingHistoryView extends ItemView {
             await this.plugin.openEpubFile(file);
         } else {
             // 文件可能已被删除或移动
-            new Notice('文件未找到: ' + filePath);
+            new Notice(`${t('file')} ${t('notFound')}: ${filePath}`);
         }
     }
 

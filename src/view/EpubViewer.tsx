@@ -41,6 +41,7 @@ import { useSectionNav } from '../hooks/useSectionNav';
 import { EPUB_VIEW_TYPE, EpubReaderView } from './EpubReaderView';
 import { ShareStyle, useShareSelection } from '../hooks/useShareSelection';
 import { cn } from '@/lib/utils';
+import { t } from '@/lang/helpers';
 
 interface EpubViewerProps {
     filePath: string;
@@ -176,7 +177,9 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                     .getFiles()
                     .find((f) => f.path === filePath);
                 if (!tfile) {
-                    throw new Error(`文件未找到: ${filePath}`);
+                    throw new Error(
+                        `${t('file')} ${t('notFound')}: ${filePath}`
+                    );
                 }
                 // 使用 vault.readBinary 读取二进制文件
                 const arrayBuffer = await app.vault.readBinary(tfile);
@@ -241,7 +244,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
             } catch (err) {
                 console.error('Error loading EPUB:', err);
                 setError(
-                    `加载 EPUB 文件失败: ${err instanceof Error ? err.message : String(err)}`
+                    `${t('failedToLoadEpub')}${err instanceof Error ? err.message : String(err)}`
                 );
                 setIsLoading(false);
             }
@@ -555,9 +558,9 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                 return content;
             })();
             await navigator.clipboard.writeText(stripped);
-            new Notice('已复制摘录文件内容');
+            new Notice(t('copiedExcerptFile'));
         } else {
-            new Notice('未找到摘录文件');
+            new Notice(t('excerptFileNotFound'));
         }
     };
 
@@ -568,7 +571,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
         if (f && f instanceof TFile) {
             app.workspace.openLinkText(path, '', false);
         } else {
-            new Notice('未找到摘录文件');
+            new Notice(t('excerptFileNotFound'));
         }
     };
 
@@ -611,17 +614,17 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
         // 删除摘录文件，仅针对“单摘录文件”安全执行
         if (path) {
             if (!isSingleExcerptNote(path)) {
-                new Notice('当前摘录来源于合并文件，仅移除高亮，不删除文件');
+                new Notice(t('removeHighlightOnly'));
                 return;
             }
             const f = app.vault.getAbstractFileByPath(path);
             if (f && f instanceof TFile) {
                 try {
                     await app.vault.delete(f);
-                    new Notice('已删除摘录文件');
+                    new Notice(t('deletedExcerptFile'));
                 } catch (err) {
                     console.error('删除摘录文件失败:', err);
-                    new Notice('删除摘录文件失败');
+                    new Notice(t('failedToDeleteExcerptFile'));
                 }
             }
         }
@@ -779,7 +782,9 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                         await app.vault.append(dailyNote, appendText);
                         highlightSelectionInViewer(dailyNote.path);
                         if (plugin.settings.excerptSuccessNotification) {
-                            new Notice(`已摘录到${dailyNote.name}`);
+                            new Notice(
+                                `${t('createdExcerpt')}${dailyNote.name}`
+                            );
                         }
                     } else {
                         dailyNote = await createDailyNote(date);
@@ -787,10 +792,12 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                             await app.vault.append(dailyNote, appendText);
                             highlightSelectionInViewer(dailyNote.path);
                             if (plugin.settings.excerptSuccessNotification) {
-                                new Notice(`已创建并添加到${dailyNote.name}`);
+                                new Notice(
+                                    `${t('createdAndAppended')}${dailyNote.name}`
+                                );
                             }
                         } else {
-                            new Notice('无法创建今日笔记');
+                            new Notice(t('failedToCreateExcerpt'));
                         }
                     }
                 }
@@ -830,12 +837,12 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                     await app.vault.create(notePath, content);
                     highlightSelectionInViewer(notePath);
                     if (plugin.settings.excerptSuccessNotification) {
-                        new Notice(`已创建摘录：${noteFileName}`);
+                        new Notice(`${t('createdExcerpt')}${noteFileName}`);
                     }
                     return notePath;
                 } catch (err) {
                     console.error('创建摘录失败:', err);
-                    new Notice('创建摘录失败，请查看控制台');
+                    new Notice(t('failedToCreateExcerpt'));
                 }
                 break;
             }
@@ -871,13 +878,15 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                         await app.vault.append(existing, entry);
                         highlightSelectionInViewer(mdPath);
                         if (plugin.settings.excerptSuccessNotification) {
-                            new Notice(`已追加到摘录：${baseName}.md`);
+                            new Notice(`${t('appendToExcerpt')}${baseName}.md`);
                         }
                     } else {
                         await app.vault.create(mdPath, header + entry + '\n');
                         highlightSelectionInViewer(mdPath);
                         if (plugin.settings.excerptSuccessNotification) {
-                            new Notice(`已创建摘录文件并追加：${baseName}.md`);
+                            new Notice(
+                                `${t('createdAndAppended')}${baseName}.md`
+                            );
                         }
                     }
 
@@ -888,7 +897,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                     await plugin.saveSettings();
                 } catch (err) {
                     console.error('写入摘录失败:', err);
-                    new Notice('写入摘录失败，请查看控制台');
+                    new Notice(t('failedToWriteExcerpt'));
                 }
                 break;
             }
@@ -926,11 +935,11 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                         await plugin.saveSettings();
                     }
                     if (plugin.settings.excerptSuccessNotification) {
-                        new Notice('已追加到统一摘录文件');
+                        new Notice(t('appendedToUnifiedExcerpt'));
                     }
                 } catch (err) {
                     console.error('写入摘录失败:', err);
-                    new Notice('写入摘录失败，请查看控制台');
+                    new Notice(t('failedToWriteExcerpt'));
                 }
                 break;
             }
@@ -949,7 +958,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
 
             // 显示通知
             if ((app as any).notice) {
-                new (app as any).Notice('摘录已复制到剪贴板');
+                new (app as any).Notice(t('excerptCopiedToClipboard'));
             }
         }
     };
@@ -973,8 +982,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
 
             // 检查是否有内容
             if (!book.sections || book.sections.length === 0) {
-                viewerRef.current.innerHTML =
-                    '<div class="p-4 text-center text-red-500">没有找到EPUB内容</div>';
+                viewerRef.current.innerHTML = `<div class="p-4 text-center text-red-500">${t('noEpubContent')}</div>`;
                 return;
             }
 
@@ -1001,7 +1009,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
         } catch (err) {
             console.error('Error initializing reader:', err);
             if (viewerRef.current) {
-                viewerRef.current.innerHTML = `<div class="p-4 text-center text-red-500">初始化失败</div>`;
+                viewerRef.current.innerHTML = `<div class=\"p-4 text-center text-red-500\">${t('initFailed')}</div>`;
             }
             setError(
                 'Failed to initialize EPUB reader: ' +
@@ -1026,7 +1034,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
             <div className="epub-content">
                 <div className="flex items-center justify-center h-64">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                    <span className="ml-4 text-lg">Loading EPUB...</span>
+                    <span className="ml-4 text-lg">{t('loadingEpub')}</span>
                 </div>
             </div>
         );
@@ -1036,12 +1044,16 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
         return (
             <div className="epub-viewer-container">
                 <div className="epub-header">
-                    <h2 className="text-xl font-bold text-red-500">Error</h2>
+                    <h2 className="text-xl font-bold text-red-500">
+                        {t('error')}
+                    </h2>
                 </div>
                 <div className="epub-content">
                     <div className="text-center text-red-500 p-8">
                         <p className="text-lg">{error}</p>
-                        <p className="text-sm mt-2">File: {filePath}</p>
+                        <p className="text-sm mt-2">
+                            {t('file')}: {filePath}
+                        </p>
                     </div>
                 </div>
             </div>
@@ -1064,14 +1076,14 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                 </div>
                 <div className="epub-header-controls">
                     <button className="readit-button" onClick={toggleTOC}>
-                        目录
+                        {t('toc')}
                     </button>
                     <button
                         className="readit-button"
                         onClick={goToPrevSection}
                         disabled={currentSectionIndex === 0}
                     >
-                        上一页
+                        {t('prevPage')}
                     </button>
                     <button
                         className="readit-button"
@@ -1081,7 +1093,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                             currentSectionIndex >= book.sections.length - 1
                         }
                     >
-                        下一页
+                        {t('nextPage')}
                     </button>
                 </div>
             </div>
@@ -1101,25 +1113,25 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                             {!book && (
                                 <div className="flex items-center justify-center h-full">
                                     <div className="text-center text-gray-500">
-                                        等待加载 EPUB 文件...
+                                        {t('waitingForEpub')}
                                     </div>
                                 </div>
                             )}
                         </div>
                     </ContextMenuTrigger>
-                    <ContextMenuContent className="w-38">
+                    <ContextMenuContent className="w-42">
                         {!selectedText && !contextHighlight && (
                             <>
                                 <ContextMenuGroup className="flex justify-evenly items-center">
                                     <ContextMenuItem
-                                        title="上一页"
+                                        title={t('prevPage')}
                                         onClick={goToPrevSection}
                                         disabled={currentSectionIndex === 0}
                                     >
                                         <ArrowLeft />
                                     </ContextMenuItem>
                                     <ContextMenuItem
-                                        title="下一页"
+                                        title={t('nextPage')}
                                         onClick={goToNextSection}
                                         disabled={
                                             currentSectionIndex ===
@@ -1129,14 +1141,14 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                                         <ArrowRight />
                                     </ContextMenuItem>
                                     <ContextMenuItem
-                                        title="跳转至目录"
+                                        title={t('jumpToToc')}
                                         onClick={toggleTOC}
                                         disabled={!book?.toc}
                                     >
                                         <List />
                                     </ContextMenuItem>
                                     <ContextMenuItem
-                                        title="刷新"
+                                        title={t('refresh')}
                                         onClick={refreshSection}
                                     >
                                         <RefreshCcw />
@@ -1154,7 +1166,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                                         selectedText.length === 0
                                     }
                                 >
-                                    <Copy /> 复制文本
+                                    <Copy /> {t('copyText')}
                                 </ContextMenuItem>
                                 <ContextMenuItem
                                     onClick={addToQuickCapture}
@@ -1163,7 +1175,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                                         selectedText.length === 0
                                     }
                                 >
-                                    <Quote /> 带引用复制
+                                    <Quote /> {t('copyWithQuote')}
                                 </ContextMenuItem>
                                 <ContextMenuItem
                                     onClick={createNote}
@@ -1172,7 +1184,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                                         selectedText.length === 0
                                     }
                                 >
-                                    <FileText /> 摘录
+                                    <FileText /> {t('excerpt')}
                                 </ContextMenuItem>
                                 <ContextMenuItem
                                     onClick={async () => {
@@ -1195,7 +1207,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                                         selectedText.length === 0
                                     }
                                 >
-                                    <SquarePen /> 摘录并跳转
+                                    <SquarePen /> {t('excerptAndOpen')}
                                 </ContextMenuItem>
                             </>
                         )}
@@ -1205,13 +1217,13 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                                     onClick={copyHighlightFileContent}
                                     disabled={!contextHighlight.sourceFile}
                                 >
-                                    <Copy /> 复制摘录
+                                    <Copy /> {t('copyExcerpt')}
                                 </ContextMenuItem>
                                 <ContextMenuItem
                                     onClick={openHighlightFile}
                                     disabled={!contextHighlight.sourceFile}
                                 >
-                                    <ExternalLink /> 跳转至文件
+                                    <ExternalLink /> {t('openFile')}
                                 </ContextMenuItem>
                             </>
                         )}
@@ -1226,24 +1238,24 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                             >
                                 <Share />{' '}
                                 {isSharing
-                                    ? '生成中…'
+                                    ? t('sharing')
                                     : selectedText
-                                      ? '分享文本'
-                                      : '分享摘录'}
+                                      ? t('shareText')
+                                      : t('shareExcerpt')}
                             </ContextMenuSubTrigger>
                             <ContextMenuSubContent className="w-38">
                                 {[
                                     {
                                         key: 'classic',
-                                        value: '经典样式',
+                                        value: t('style_classic'),
                                     },
                                     {
                                         key: 'minimal',
-                                        value: '极简样式',
+                                        value: t('style_minimal'),
                                     },
                                     {
                                         key: 'image-left',
-                                        value: '左图右文',
+                                        value: t('style_image_left'),
                                     },
                                 ].map(({ key, value }) => (
                                     <ContextMenuItem
@@ -1286,7 +1298,9 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                                                         key as ShareStyle
                                                     );
                                             } else {
-                                                new Notice('没有可分享的内容');
+                                                new Notice(
+                                                    t('noShareableContent')
+                                                );
                                                 return;
                                             }
                                         }}
@@ -1304,7 +1318,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                                     !selectedText || selectedText.length === 0
                                 }
                             >
-                                <Search /> 在库中搜索
+                                <Search /> {t('searchInVault')}
                             </ContextMenuItem>
                         )}
                         {contextHighlight && (
@@ -1318,7 +1332,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                                 }
                                 variant="destructive"
                             >
-                                <Trash2 /> 删除摘录
+                                <Trash2 /> {t('deleteExcerpt')}
                             </ContextMenuItem>
                         )}
                     </ContextMenuContent>

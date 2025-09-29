@@ -13,7 +13,7 @@ export interface EpubMetadata {
     title?: string;
     description?: string;
     creator?: string;
-    subject?: string;
+    subject?: string[];
     date?: string;
     coverUrl?: string; // 新增封面 URL 字段
 }

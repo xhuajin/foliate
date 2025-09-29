@@ -124,7 +124,7 @@ interface ReadingBentoCardProps {
               description?: string;
               language?: string;
               publisher?: string;
-              subject?: string;
+              subject?: string[];
               coverUrl?: string;
           }
         | undefined;
@@ -266,17 +266,14 @@ const ReadingBentoCard = ({
                     )}
                     {metadata?.subject && (
                         <div className="flex flex-wrap gap-1 mb-3">
-                            {metadata.subject
-                                .split(',')
-                                .slice(0, 2)
-                                .map((tag, idx) => (
-                                    <span
-                                        key={idx}
-                                        className="px-2 py-1 text-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-full"
-                                    >
-                                        {tag.trim()}
-                                    </span>
-                                ))}
+                            {metadata?.subject.map((tag, idx) => (
+                                <span
+                                    key={idx}
+                                    className="px-2 py-1 text-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-full"
+                                >
+                                    {tag.trim()}
+                                </span>
+                            ))}
                         </div>
                     )}
                 </div>

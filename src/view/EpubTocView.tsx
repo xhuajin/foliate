@@ -11,6 +11,7 @@ import {
     expandAllFeature,
 } from '@headless-tree/core';
 import { cn } from '../lib/utils';
+import { t } from '@/lang/helpers';
 import { ChevronsDownUp, ChevronsUpDown, Focus } from 'lucide-react';
 
 export const EPUB_TOC_VIEW_TYPE = 'epub-toc-view';
@@ -117,8 +118,8 @@ const EpubToc: React.FC<EpubTocProps> = ({
     if (!book) {
         return (
             <div className="toc-empty-state">
-                <p>没有加载的书籍</p>
-                <p className="text-xs">等待书籍数据...</p>
+                <p>{t('noBookLoaded')}</p>
+                <p className="text-xs">{t('waitingBookData')}</p>
             </div>
         );
     }
@@ -126,8 +127,8 @@ const EpubToc: React.FC<EpubTocProps> = ({
     if (!book.toc) {
         return (
             <div className="toc-empty-state">
-                <p>书籍没有目录数据</p>
-                <p className="text-xs">book.toc 为空</p>
+                <p>{t('noTocData')}</p>
+                <p className="text-xs">{t('bookTocEmpty')}</p>
             </div>
         );
     }
@@ -135,9 +136,12 @@ const EpubToc: React.FC<EpubTocProps> = ({
     if (!tocItems || Object.keys(tocItems).length === 0) {
         return (
             <div className="toc-empty-state">
-                <p>没有找到目录信息</p>
-                <p className="text-xs">处理后的目录为空</p>
-                <p className="text-xs">原始目录项数: {book.toc?.length || 0}</p>
+                <p>{t('noTocFound')}</p>
+                <p className="text-xs">{t('processedTocEmpty')}</p>
+                <p className="text-xs">
+                    {t('rawTocCount')}
+                    {book.toc?.length || 0}
+                </p>
             </div>
         );
     }
@@ -208,7 +212,7 @@ const EpubToc: React.FC<EpubTocProps> = ({
         },
         indent,
         rootItemId: 'root',
-        getItemName: (item) => item.getItemData().label || '未命名章节',
+        getItemName: (item) => item.getItemData().label || t('unnamedChapter'),
         isItemFolder: (item) =>
             (item.getItemData()?.childrenIds?.length ?? 0) > 0,
         dataLoader: {
@@ -232,14 +236,14 @@ const EpubToc: React.FC<EpubTocProps> = ({
                 <div
                     className="toc-btn clickable-icon nav-action-button"
                     onClick={() => tree.collapseAll()}
-                    title="折叠所有"
+                    title={t('collapseAll')}
                 >
                     <ChevronsDownUp size={18} />
                 </div>
                 <div
                     className="toc-btn clickable-icon nav-action-button"
                     onClick={() => tree.expandAll()}
-                    title="展开所有"
+                    title={t('expandAll')}
                 >
                     <ChevronsUpDown size={18} />
                 </div>
@@ -275,7 +279,7 @@ const EpubToc: React.FC<EpubTocProps> = ({
                             }, 150); // 增加延迟确保DOM重建完成
                         }
                     }}
-                    title="聚焦当前章节"
+                    title={t('focusCurrent')}
                 >
                     <Focus size={18} />
                 </div>
@@ -325,7 +329,8 @@ const EpubToc: React.FC<EpubTocProps> = ({
             <div className="toc-footer">
                 {book?.sections && (
                     <p>
-                        当前: {currentSectionIndex + 1} / {book.sections.length}
+                        {t('current')}: {currentSectionIndex + 1} /{' '}
+                        {book.sections.length}
                     </p>
                 )}
             </div>
@@ -351,7 +356,7 @@ export class EpubTocView extends ItemView {
     }
 
     getDisplayText(): string {
-        return '目录';
+        return t('tocView');
     }
 
     override getIcon(): string {
@@ -414,7 +419,7 @@ export class EpubTocView extends ItemView {
                 const tocItem: TocItem = {
                     id,
                     href: item.href || '',
-                    label: item.label || '未命名',
+                    label: item.label || t('unknown'),
                     level,
                     parentId,
                     childrenIds: childIds.length > 0 ? childIds : undefined,
@@ -436,7 +441,7 @@ export class EpubTocView extends ItemView {
             const rootItem: TocItem = {
                 id: 'root',
                 href: '',
-                label: this.book?.metadata?.title || '目录',
+                label: this.book?.metadata?.title || t('tocView'),
                 level: -1,
                 parentId: undefined, // 根节点没有父级
                 childrenIds: rootChildren,
