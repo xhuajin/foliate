@@ -1,9 +1,9 @@
 {
     "id": "readit",
     "name": "ReadIt",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "minAppVersion": "1.4.0",
-    "description": "An EPUB reader plugin for Obsidian",
+    "description": "An EPUB reader plugin for Obsidian.",
     "author": "Huajin",
     "authorUrl": "https://github.com/xhuajin",
     "isDesktopOnly": true

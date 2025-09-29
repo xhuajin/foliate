@@ -109,9 +109,9 @@ export default class ReadItPlugin extends Plugin {
         // 注意：不在布局就绪时自动切换左侧 tab，仅在阅读器加载时（EpubViewer）检测并更新已存在的 TOC 视图。
     }
 
-    override onunload(): void {
-        console.log('ReadIt plugin unloaded');
-    }
+    // override onunload(): void {
+    //     console.log('ReadIt plugin unloaded');
+    // }
 
     async loadSettings(): Promise<void> {
         this.settings = Object.assign(
@@ -219,34 +219,6 @@ export default class ReadItPlugin extends Plugin {
             console.error('视图创建失败或没有 setFileInfo 方法');
         }
     }
-
-    // async selectAndOpenEpubFile(): Promise<void> {
-    //     // 获取当前活动文件
-    //     const activeFile = this.app.workspace.getActiveFile();
-
-    //     if (activeFile && activeFile.extension === 'epub') {
-    //         await this.openEpubFile(activeFile);
-    //     } else {
-    //         // 显示所有 EPUB 文件供用户选择
-    //         const epubFiles = this.app.vault
-    //             .getFiles()
-    //             .filter((file) => file.extension === 'epub');
-
-    //         if (epubFiles.length === 0) {
-    //             new Notice('没有找到 EPUB 文件');
-    //             return;
-    //         }
-
-    //         if (epubFiles.length === 1) {
-    //             await this.openEpubFile(epubFiles[0] as TFile);
-    //         } else {
-    //             // 如果有多个文件，可以实现一个选择器
-    //             new Notice(
-    //                 `找到 ${epubFiles.length} 个 EPUB 文件。请右键点击 EPUB 文件选择"用 ReadIt 阅读器打开"`
-    //             );
-    //         }
-    //     }
-    // }
 
     // 打开阅读历史页面
     async openReadingHistory(): Promise<void> {

@@ -181,15 +181,6 @@ export function useRenderSection(
                         readerContainer.innerHTML =
                             '<div class="p-4 text-center text-yellow-600">无法解析章节内容</div>';
                     }
-                } else {
-                    const sectionUrl = await section.load();
-                    readerContainer.innerHTML = `
-            <div class="p-4">
-              <h2 class="text-xl font-bold mb-4">第 ${sectionIndex + 1} 章</h2>
-              <p>章节URL: ${sectionUrl}</p>
-              <p class="mt-4 text-sm text-gray-600">正在开发完整的内容渲染功能...</p>
-            </div>
-          `;
                 }
             } catch (err) {
                 console.error('渲染章节失败:', err);
@@ -197,7 +188,7 @@ export function useRenderSection(
                     '.epub-reader-content'
                 ) as HTMLElement | null;
                 if (readerContainer) {
-                    readerContainer.innerHTML = `<div class="p-4 text-center text-red-500">加载失败: ${err}</div>`;
+                    readerContainer.innerHTML = `<div class="p-4 text-center text-red-500">加载失败</div>`;
                 }
             }
         },

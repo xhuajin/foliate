@@ -7,6 +7,13 @@
     width: fit-content;
 }
 
+.readit-share-wrapper {
+    position: fixed;
+    left: -99999px;
+    top: -99999px;
+    z-index: 99999;
+}
+
 .readit-share-body {
     padding-left: 3rem;
     padding-right: 3rem;

@@ -212,7 +212,7 @@ export class ReadingHistoryView extends ItemView {
 
     private async handleOpenBook(filePath: string): Promise<void> {
         // 查找对应的TFile
-        const file = this.app.vault.getFiles().find((f) => f.path === filePath);
+        const file = this.app.vault.getFileByPath(filePath);
         if (file && file instanceof TFile) {
             await this.plugin.openEpubFile(file);
         } else {

@@ -40,7 +40,7 @@ import { useRenderSection } from '../hooks/useRenderSection';
 import { useSectionNav } from '../hooks/useSectionNav';
 import { EPUB_VIEW_TYPE, EpubReaderView } from './EpubReaderView';
 import { ShareStyle, useShareSelection } from '../hooks/useShareSelection';
-import { s } from 'framer-motion/client';
+import { cn } from '@/lib/utils';
 
 interface EpubViewerProps {
     filePath: string;
@@ -535,7 +535,9 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
             const stripped = (() => {
                 // 常见形式：---\n...\n---\n 置于文件最前
                 if (content.startsWith('---')) {
+                    // 可以通过正则排除frontmatter中包含 --- 的情况
                     const match = content.match(/^---\s*\n[\s\S]*?\n---\s*\n?/);
+
                     if (match) return content.slice(match[0].length);
                 }
                 // 兼容分隔法：split('---')
@@ -650,11 +652,11 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
 
         // 创建统一的 wrapper（附带来源与点击跳转）
         const createWrapper = () => {
-            const wrapper = document.createElement('span');
-            wrapper.className = 'epub-highlight';
+            const wrapper = document.createSpan({
+                cls: 'epub-highlight',
+            });
             if (targetFilePath) {
                 wrapper.setAttribute('data-source-file', targetFilePath);
-                (wrapper as HTMLElement).style.cursor = 'pointer';
                 wrapper.onclick = (e) => {
                     e.stopPropagation();
                     const f = app.vault.getAbstractFileByPath(targetFilePath);
@@ -752,6 +754,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
         return true;
     };
 
+    // 摘录创建文件
     const createNote = async () => {
         const selection = window.getSelection();
         const text = selection ? selection.toString().trim() : '';
@@ -932,6 +935,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                 break;
             }
         }
+        return;
     };
 
     const addToQuickCapture = () => {
@@ -951,7 +955,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
     };
 
     // 分享 Hook
-    const { shareSelection, shareText, isSharing } = useShareSelection({
+    const { shareText, isSharing } = useShareSelection({
         app,
         plugin,
         viewerRef,
@@ -997,7 +1001,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
         } catch (err) {
             console.error('Error initializing reader:', err);
             if (viewerRef.current) {
-                viewerRef.current.innerHTML = `<div class="p-4 text-center text-red-500">初始化失败: ${err instanceof Error ? err.message : String(err)}</div>`;
+                viewerRef.current.innerHTML = `<div class="p-4 text-center text-red-500">初始化失败</div>`;
             }
             setError(
                 'Failed to initialize EPUB reader: ' +
@@ -1048,10 +1052,13 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
         <div className="epub-viewer-container">
             <div className="epub-viewer-header flex h-(--header-height) items-center justify-center">
                 <div
-                    className={
-                        'epub-header-title transition-opacity duration-200 ' +
-                        (isHeadVisible ? 'opacity-0' : 'opacity-100')
-                    }
+                    className={cn(
+                        'epub-header-title flex h-full text-center items-center justify-center',
+                        'transition-transform duration-300 ease-out',
+                        isHeadVisible
+                            ? 'transform -translate-y-full'
+                            : 'transform translate-y-0'
+                    )}
                 >
                     {sectionTitle || book?.metadata?.title || fileName}
                 </div>

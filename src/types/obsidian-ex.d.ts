@@ -5,18 +5,6 @@ import 'obsidian';
 
 /** Provides extensions used by datacore or provider to other plugins via datacore. */
 declare module 'obsidian' {
-    interface FileManager {
-        linkUpdaters: {
-            canvas: {
-                canvas: {
-                    index: {
-                        index: CanvasMetadataIndex;
-                    };
-                };
-            };
-        };
-    }
-
     interface App {
         appId?: string;
 

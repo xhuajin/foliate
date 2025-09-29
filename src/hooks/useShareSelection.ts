@@ -69,32 +69,40 @@ export function useShareSelection({
                 .getPropertyValue('--background-primary')
                 .trim() || '#fff';
 
-        const card = document.createElement('div');
-        card.setAttribute('data-share-card', 'true');
-        card.classList.add('readit-share-card');
+        const card = document.createEl('div', {
+            attr: { 'data-share-card': 'true' },
+            cls: 'readit-share-card',
+        });
 
         // Header
-        const header = document.createElement('div');
-        header.classList.add('readit-share-card-header');
-        const left = document.createElement('div');
-        left.classList.add('readit-share-card-head-left');
-        const titleEl = document.createElement('div');
-        titleEl.textContent = title;
-        titleEl.classList.add('readit-share-card-title');
-        const metaEl = document.createElement('div');
-        metaEl.textContent = [author, pageLabel].filter(Boolean).join(' · ');
-        metaEl.classList.add('readit-share-card-meta');
+        const header = document.createEl('div', {
+            cls: 'readit-share-card-header',
+        });
+        const left = document.createEl('div', {
+            cls: 'readit-share-card-head-left',
+        });
+        const titleEl = document.createEl('div', {
+            text: title,
+            cls: 'readit-share-card-title',
+        });
+        const metaEl = document.createEl('div', {
+            text: [author, pageLabel].filter(Boolean).join(' · '),
+            cls: 'readit-share-card-meta',
+        });
         left.appendChild(titleEl);
         left.appendChild(metaEl);
-        const right = document.createElement('div');
-        right.classList.add('readit-share-card-badge');
-        right.textContent = 'ReadIt · Obsidian';
+
+        const right = document.createEl('div', {
+            cls: 'readit-share-card-badge',
+            text: 'ReadIt · Obsidian',
+        });
         header.appendChild(left);
         header.appendChild(right);
 
         // Body
-        const body = document.createElement('div');
-        body.classList.add('readit-share-card-body');
+        const body = document.createEl('div', {
+            cls: 'readit-share-card-body',
+        });
         body.style.fontSize = `${plugin?.settings?.fontSize ? Math.max(14, Math.min(20, Number(plugin.settings.fontSize))) : 16}px`;
         body.style.lineHeight = `${plugin?.settings?.lineHeight || 1.6}`;
         body.textContent = text;
@@ -105,20 +113,25 @@ export function useShareSelection({
         } else if (style === 'minimal') {
             body.classList.add('minimal');
         } else if (style === 'image-left') {
-            const row = document.createElement('div');
-            row.classList.add('readit-share-card-row');
-            const leftImgWrap = document.createElement('div');
-            leftImgWrap.classList.add('readit-share-card-left');
+            const row = document.createDiv({
+                cls: 'readit-share-card-row',
+            });
+            const leftImgWrap = document.createDiv({
+                cls: 'readit-share-card-left',
+            });
             if (coverUrl) {
-                const img = document.createElement('img');
+                const img = document.createEl('img', {
+                    attr: { draggable: 'false' },
+                    cls: 'readit-share-cover-lg',
+                });
                 img.src = coverUrl;
                 img.alt = 'cover';
-                img.classList.add('readit-share-cover-lg');
                 img.referrerPolicy = 'no-referrer';
                 leftImgWrap.appendChild(img);
             }
-            const textWrap = document.createElement('div');
-            textWrap.classList.add('readit-share-card-textwrap');
+            const textWrap = document.createDiv({
+                cls: 'readit-share-card-textwrap',
+            });
             textWrap.appendChild(body);
             row.appendChild(leftImgWrap);
             row.appendChild(textWrap);
@@ -132,24 +145,29 @@ export function useShareSelection({
         }
 
         // Footer
-        const footer = document.createElement('div');
-        footer.classList.add('readit-share-card-footer');
+        const footer = document.createDiv({
+            cls: 'readit-share-card-footer',
+        });
         const time = new Date();
         const ts = `${time.getFullYear()}-${String(time.getMonth() + 1).padStart(2, '0')}-${String(time.getDate()).padStart(2, '0')} ${String(time.getHours()).padStart(2, '0')}:${String(time.getMinutes()).padStart(2, '0')}`;
         const leftFoot = document.createElement('div');
         leftFoot.textContent = ts;
-        const rightFoot = document.createElement('div');
-        rightFoot.classList.add('readit-share-card-footer-right');
+        const rightFoot = document.createDiv({
+            cls: 'readit-share-card-footer-right',
+        });
         if (coverUrl && style !== 'image-left') {
-            const img = document.createElement('img');
+            const img = document.createEl('img', {
+                cls: 'readit-share-cover-sm',
+            });
             img.src = coverUrl;
             img.alt = 'cover';
-            img.classList.add('readit-share-cover-sm');
             img.referrerPolicy = 'no-referrer';
             rightFoot.appendChild(img);
         }
-        const fromEl = document.createElement('span');
-        fromEl.textContent = `来源：${title}`;
+        const fromEl = document.createSpan({
+            cls: 'readit-share-card-footer-from',
+            text: `来源：${title}`,
+        });
         rightFoot.appendChild(fromEl);
         footer.appendChild(leftFoot);
         footer.appendChild(rightFoot);
@@ -173,10 +191,7 @@ export function useShareSelection({
 
             // 离屏容器（保持到 Modal 关闭，避免截图空白）
             wrapperEl = document.createElement('div');
-            wrapperEl.style.position = 'fixed';
-            wrapperEl.style.left = '-99999px';
-            wrapperEl.style.top = '-99999px';
-            wrapperEl.style.zIndex = '2147483647';
+            wrapperEl.classList.add('readit-share-wrapper');
             document.body.appendChild(wrapperEl);
 
             // 根据样式构造卡片

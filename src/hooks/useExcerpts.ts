@@ -1,7 +1,7 @@
 import { App, TFile } from 'obsidian';
 import React from 'react';
 import type ReadItPlugin from '../main';
-import { getAllDailyNotes } from 'obsidian-daily-notes-interface';
+// import { getAllDailyNotes } from 'obsidian-daily-notes-interface';
 
 type Excerpt = {
     excerpt: string;
@@ -205,101 +205,133 @@ export function useExcerpts(
                   )
                 : [];
 
-        if (mode === 'per-book') {
-            const map = plugin.settings.perBookExcerptMap || {};
-            const mdPath =
-                map[filePath] || `${dir ? dir + '/' : ''}${baseName}.md`;
-            const content = await readFileIfExists(mdPath);
-            const arr = fromContent(content);
-            return arr.map((e) => ({ ...e, sourceFile: mdPath }));
-        }
+        const excerpts: Excerpt[] = [];
 
-        if (mode === 'single-note') {
-            const mdPath =
-                plugin.settings.singleExcerptPath || '_ReadIt_摘录.md';
-            const content = await readFileIfExists(mdPath);
-            const arr = fromContent(content);
-            return arr.map((e) => ({ ...e, sourceFile: mdPath }));
-        }
-
-        if (mode === 'per-note') {
-            const files = app.vault
-                .getFiles()
-                .filter(
-                    (f) =>
-                        f.extension === 'md' &&
-                        (dir
-                            ? f.path.startsWith(dir + '/')
-                            : !f.path.includes('/')) &&
-                        new RegExp(
-                            `^${escapeRegExp(baseName)} 摘录 .*\.md$`
-                        ).test(f.name)
-                );
-            const all: Excerpt[] = [];
-            for (const f of files) {
-                const text = await app.vault.read(f);
-                const markdown = text.startsWith('---')
-                    ? text.split('---')
-                    : text;
-                const frontmatter =
-                    markdown.length >= 3
-                        ? markdown[1]?.split('\n').reduce(
-                              (acc, line) => {
-                                  const [key, ...rest] = line.split(':');
-                                  if (key && rest.length > 0) {
-                                      acc[key.trim()] = rest.join(':').trim();
-                                  }
-                                  return acc;
-                              },
-                              {} as Record<string, string>
-                          )
-                        : {};
-                if (
-                    frontmatter &&
-                    frontmatter['book'] === title &&
-                    frontmatter['section'] === String(sectionIndex + 1)
-                ) {
-                    const content = text.split('---')[2] ?? text;
-                    content?.split('\n').map((p) =>
-                        all.push({
-                            excerpt: p,
-                            sourceFile: f.path,
-                            // cfi: frontmatter['cfi'] || null,
-                        })
-                    );
+        switch (mode) {
+            case 'per-book':
+            case 'single-note':
+            case 'per-note': {
+                const folder = app.vault.getFolderByPath(dir);
+                const files = folder
+                    ? (folder.children.filter(
+                          (f) => f instanceof TFile
+                      ) as TFile[])
+                    : [];
+                for (const f of files) {
+                    const content = await app.vault.read(f);
+                    const match = content.match(/^---\s*\n[\s\S]*?\n---\s*\n?/);
+                    const markdown = content;
+                    if (match) markdown.slice(match[0].length);
+                    await app.fileManager.processFrontMatter(f, (fm) => {
+                        if (
+                            fm &&
+                            fm['book'] === title &&
+                            (fm['section'] === sectionIndex + 1 ||
+                                fm['section'] === String(sectionIndex + 1))
+                        ) {
+                            markdown?.split('\n').map((p) =>
+                                excerpts.push({
+                                    excerpt: p,
+                                    sourceFile: f.path,
+                                    // cfi: frontmatter['cfi'] || null,
+                                })
+                            );
+                        }
+                    });
                 }
+                break;
             }
-            return all;
-        }
-
-        if (mode === 'daily-note') {
-            try {
-                const allDaily = getAllDailyNotes();
-                const all: Excerpt[] = [];
-                for (const f of Object.values(allDaily)) {
-                    if (f) {
-                        const c = await app.vault.read(f);
-                        const parsed = parseExcerptsFromMarkdown(
-                            c,
-                            sectionIndex,
-                            title,
-                            chapterTitle
-                        ).map((e) => ({ ...e, sourceFile: f.path }));
-                        all.push(...parsed);
-                    }
-                }
-                return all;
-            } catch (e) {
-                console.warn('读取日记摘录失败：', e);
+            case 'daily-note':
+                break;
+            default:
+                console.warn('Unknown excerpt storage mode:', mode);
                 return [];
-            }
         }
 
-        return [];
+        // if (mode === 'per-book') {
+        //     const map = plugin.settings.perBookExcerptMap || {};
+        //     const mdPath =
+        //         map[filePath] || `${dir ? dir + '/' : ''}${baseName}.md`;
+        //     const content = await readFileIfExists(mdPath);
+        //     const arr = fromContent(content);
+        //     return arr.map((e) => ({ ...e, sourceFile: mdPath }));
+        // }
+
+        // if (mode === 'single-note') {
+        //     const mdPath =
+        //         plugin.settings.singleExcerptPath || '_ReadIt_摘录.md';
+        //     const content = await readFileIfExists(mdPath);
+        //     const arr = fromContent(content);
+        //     return arr.map((e) => ({ ...e, sourceFile: mdPath }));
+        // }
+
+        // if (mode === 'per-note') {
+        //     const files = app.vault
+        //         .getFiles()
+        //         .filter(
+        //             (f) =>
+        //                 f.extension === 'md' &&
+        //                 (dir
+        //                     ? f.path.startsWith(dir + '/')
+        //                     : !f.path.includes('/')) &&
+        //                 new RegExp(
+        //                     `^${escapeRegExp(baseName)} 摘录 .*\.md$`
+        //                 ).test(f.name)
+        //         );
+        //     const excerpts: Excerpt[] = [];
+        //     for (const f of files) {
+        //         const text = await app.vault.read(f);
+        //         const markdown = text.startsWith('---')
+        //             ? text.split('---')[2]
+        //             : text;
+        //         await app.fileManager.processFrontMatter(f, (fm) => {
+        //             if (
+        //                 fm &&
+        //                 fm['book'] === title &&
+        //                 (fm['section'] === sectionIndex + 1 ||
+        //                     fm['section'] === String(sectionIndex + 1))
+        //             ) {
+        //                 markdown?.split('\n').map((p) =>
+        //                     excerpts.push({
+        //                         excerpt: p,
+        //                         sourceFile: f.path,
+        //                         // cfi: frontmatter['cfi'] || null,
+        //                     })
+        //                 );
+        //             }
+        //         });
+        //     }
+        //     return excerpts;
+        // }
+
+        // if (mode === 'daily-note') {
+        //     try {
+        //         const allDaily = getAllDailyNotes();
+        //         const all: Excerpt[] = [];
+        //         for (const f of Object.values(allDaily)) {
+        //             if (f) {
+        //                 const c = await app.vault.read(f);
+        //                 const parsed = parseExcerptsFromMarkdown(
+        //                     c,
+        //                     sectionIndex,
+        //                     title,
+        //                     chapterTitle
+        //                 ).map((e) => ({ ...e, sourceFile: f.path }));
+        //                 all.push(...parsed);
+        //             }
+        //         }
+        //         return all;
+        //     } catch (e) {
+        //         console.warn('读取日记摘录失败：', e);
+        //         return [];
+        //     }
+        // }
+
+        return excerpts;
     };
 
     const highlightInContainer = (container: HTMLElement, phrase: Excerpt) => {
-        if (!phrase || phrase.excerpt.length < 3) return 0;
+        if (!phrase || phrase.excerpt.length < 1) return 0;
         let count = 0;
         const walker = document.createTreeWalker(
             container,
@@ -339,11 +371,11 @@ export function useExcerpts(
             } catch {
                 continue;
             }
-            const wrapper = document.createElement('span');
-            wrapper.className = 'epub-highlight';
+            const wrapper = document.createEl('span', {
+                cls: 'epub-highlight',
+            });
             if (phrase.sourceFile) {
                 wrapper.setAttribute('data-source-file', phrase.sourceFile);
-                (wrapper as HTMLElement).style.cursor = 'pointer';
             }
             wrapper.onclick = (e) => {
                 // 点击跳转到摘录文件
