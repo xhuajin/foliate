@@ -4,6 +4,7 @@
 
 @import './styles/epub-toc.css';
 @import './styles/epub-share.css';
+@import './styles/coverflow.css';
 
 /* shadcn/Linear inspired design system */
 :root {
@@ -72,6 +73,10 @@
 .workspace-leaf-content[data-type='epub-reader-view'] .view-content {
     padding: 0;
     overflow: hidden;
+}
+
+.workspace-leaf-content[data-type='reading-history-view'] .view-content {
+    padding-top: 0;
 }
 
 /* Custom components */
@@ -275,7 +280,6 @@ foliate-view {
 
 /* Reading History - Linear inspired minimal design */
 .reading-history-container {
-    padding: 1.5rem;
     background: var(--background-primary);
     color: var(--text-normal);
     height: 100%;

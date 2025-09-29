@@ -1,0 +1,175 @@
+/**
+ * CoverFlow 样式
+ */
+
+/* CoverFlow 容器 */
+.coverflow-container {
+    perspective: 1200px;
+    perspective-origin: center center;
+}
+
+/* 增强 3D 变换效果 */
+.coverflow-card {
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
+    will-change: transform;
+}
+
+/* CoverFlow 卡片悬浮效果 */
+.coverflow-card:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+/* 激活状态的卡片 */
+.coverflow-card.active {
+    filter: brightness(1.15);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+}
+
+/* 渐变遮罩效果 */
+.coverflow-gradient {
+    background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        transparent 40%,
+        rgba(0, 0, 0, 0.7) 100%
+    );
+}
+
+/* 进度条动画 */
+@keyframes progressAnimation {
+    from {
+        width: 0%;
+    }
+    to {
+        width: var(--progress-width);
+    }
+}
+
+.progress-animated {
+    animation: progressAnimation 0.8s ease-out forwards;
+}
+
+/* 支持通过 data-width 设置宽度，避免行内样式告警 */
+.progress-animated,
+.progress-inline {
+    width: var(--_progress-width, 0%);
+}
+.progress-inline[data-width] {
+    --_progress-width: attr(data-width);
+}
+
+/* 书籍封面占位符样式 */
+.book-cover-placeholder {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.book-cover-placeholder.reading {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.book-cover-placeholder.completed {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.book-cover-placeholder.not-started {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+/* Dark mode adjustments */
+.dark .coverflow-card {
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .book-cover-placeholder {
+    opacity: 0.9;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .coverflow-container {
+        perspective: 800px;
+    }
+
+    .coverflow-card {
+        width: 160px !important;
+        height: 220px !important;
+    }
+}
+
+/* 键盘导航提示样式 */
+.keyboard-hint {
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.dark .keyboard-hint {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+/* 详情面板样式 */
+.coverflow-details {
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+}
+
+/* 导航按钮样式 */
+.coverflow-nav-button {
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.coverflow-nav-button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.coverflow-nav-button:active {
+    transform: scale(0.95);
+}
+
+/* 指示器点样式 */
+.coverflow-dot {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.coverflow-dot:hover {
+    transform: scale(1.5);
+}
+
+/* 卡片入场动画 */
+@keyframes slideInFromRight {
+    from {
+        transform: translateX(100px) rotateY(-60deg);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0) rotateY(0deg);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInFromLeft {
+    from {
+        transform: translateX(-100px) rotateY(60deg);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0) rotateY(0deg);
+        opacity: 1;
+    }
+}
+
+.coverflow-enter-right {
+    animation: slideInFromRight 0.5s ease-out;
+}
+
+.coverflow-enter-left {
+    animation: slideInFromLeft 0.5s ease-out;
+}
