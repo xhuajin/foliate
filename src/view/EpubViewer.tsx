@@ -42,6 +42,7 @@ import { EPUB_VIEW_TYPE, EpubReaderView } from './EpubReaderView';
 import { ShareStyle, useShareSelection } from '../hooks/useShareSelection';
 import { cn } from '@/lib/utils';
 import { t } from '@/lang/helpers';
+import { normalizeAuthor } from '@/lib/metadata';
 
 interface EpubViewerProps {
     filePath: string;
@@ -81,30 +82,13 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
     const saveProgress = async (sectionIndex: number) => {
         if (filePath && plugin.settings.autoSaveProgress) {
             // 提取书籍元数据
-            let metadata = undefined;
+            let metadata: any = undefined;
             if (book?.metadata) {
                 // 安全地提取作者信息
-                let author = '';
-                if (book.metadata.creator) {
-                    if (typeof book.metadata.creator === 'string') {
-                        author = book.metadata.creator;
-                    } else if (book.metadata.creator.name) {
-                        author = book.metadata.creator.name;
-                    } else if (Array.isArray(book.metadata.creator)) {
-                        author = book.metadata.creator
-                            .map((c: any) =>
-                                typeof c === 'string' ? c : c.name || ''
-                            )
-                            .filter(Boolean)
-                            .join(', ');
-                    }
-                } else if (book.metadata.author) {
-                    if (typeof book.metadata.author === 'string') {
-                        author = book.metadata.author;
-                    } else if (book.metadata.author.name) {
-                        author = book.metadata.author.name;
-                    }
-                }
+                const author = normalizeAuthor(
+                    (book.metadata as any).author ??
+                        (book.metadata as any).creator
+                );
 
                 // 获取封面
                 let coverUrl = undefined;
@@ -128,27 +112,28 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                     }
                 }
 
-                metadata = {
-                    title: book.metadata.title || fileName.replace('.epub', ''),
-                    ...(author && { author }),
-                    ...(book.metadata.publisher && {
-                        publisher: book.metadata.publisher,
-                    }),
-                    ...(book.metadata.language && {
-                        language: book.metadata.language,
-                    }),
-                    ...(book.metadata.description && {
-                        description: book.metadata.description,
-                    }),
-                    ...(book.metadata.subject && {
-                        subject: book.metadata.subject,
-                    }),
-                    ...(book.metadata.date && { date: book.metadata.date }),
-                    ...(book.metadata.identifier && {
-                        identifier: book.metadata.identifier,
-                    }),
-                    ...(coverUrl && { coverUrl }),
+                metadata = {};
+                const assign = (k: string, v: any) => {
+                    if (
+                        v !== undefined &&
+                        v !== null &&
+                        (!(typeof v === 'string') || v.trim() !== '') &&
+                        (!Array.isArray(v) || v.length > 0)
+                    )
+                        (metadata as any)[k] = v;
                 };
+                assign(
+                    'title',
+                    book.metadata.title || fileName.replace('.epub', '')
+                );
+                assign('author', author);
+                assign('publisher', (book.metadata as any).publisher);
+                assign('language', (book.metadata as any).language);
+                assign('description', (book.metadata as any).description);
+                assign('subject', (book.metadata as any).subject);
+                assign('date', (book.metadata as any).date);
+                assign('identifier', (book.metadata as any).identifier);
+                assign('coverUrl', coverUrl);
             }
 
             await plugin.saveReadingProgress({

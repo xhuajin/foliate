@@ -9,6 +9,7 @@ export interface EpubMetadata {
     language?: string;
     modified?: string;
     published?: string;
+    publisher?: string; // 出版社
     rights?: string;
     title?: string;
     description?: string;

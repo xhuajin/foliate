@@ -8,6 +8,7 @@ import { EpubTocView, EPUB_TOC_VIEW_TYPE } from './view/EpubTocView.tsx';
 import './styles.css';
 import ReadItSettingTab, { DEFAULT_SETTINGS } from './settings.ts';
 import { EpubReadingProgress, ReadItSettings } from './types.ts';
+import { mergeMetadata } from '@/lib/metadata';
 
 export default class ReadItPlugin extends Plugin {
     settings!: ReadItSettings;
@@ -107,6 +108,47 @@ export default class ReadItPlugin extends Plugin {
         });
 
         // 注意：不在布局就绪时自动切换左侧 tab，仅在阅读器加载时（EpubViewer）检测并更新已存在的 TOC 视图。
+
+        // 监听文件被重命名/移动，若为 epub 且在 data.json 有记录，则更新路径与文件名
+        this.registerEvent(
+            this.app.vault.on('rename', async (file, oldPath) => {
+                if (!(file instanceof TFile)) return;
+                if (file.extension !== 'epub') return;
+
+                const newPath = file.path;
+                const newName = file.name;
+
+                let changed = false;
+                // recentBooks 中的路径更新
+                this.settings.recentBooks = this.settings.recentBooks.map(
+                    (b) => {
+                        if (b.filePath === oldPath) {
+                            changed = true;
+                            return {
+                                ...b,
+                                filePath: newPath,
+                                fileName: newName,
+                            };
+                        }
+                        return b;
+                    }
+                );
+
+                // perBookExcerptMap 中可能以 filePath 作为 key
+                if (this.settings.perBookExcerptMap) {
+                    if (this.settings.perBookExcerptMap[oldPath]) {
+                        const mdPath = this.settings.perBookExcerptMap[oldPath];
+                        delete this.settings.perBookExcerptMap[oldPath];
+                        this.settings.perBookExcerptMap[newPath] = mdPath;
+                        changed = true;
+                    }
+                }
+
+                if (changed) {
+                    await this.saveSettings();
+                }
+            })
+        );
     }
 
     // override onunload(): void {
@@ -133,11 +175,24 @@ export default class ReadItPlugin extends Plugin {
         );
 
         if (existingIndex >= 0) {
-            // 更新现有进度
-            this.settings.recentBooks[existingIndex] = progress;
+            // 合并元数据，避免覆盖用户在 data.json 中的手动修改
+            const existing = this.settings.recentBooks[existingIndex]!;
+            const mergedMeta = mergeMetadata(
+                existing.metadata,
+                progress.metadata
+            );
+            // 更新现有进度（保持其它字段以传入 progress 为准）
+            this.settings.recentBooks[existingIndex] = {
+                ...existing,
+                ...progress,
+                ...(mergedMeta ? { metadata: mergedMeta } : {}),
+            };
         } else {
             // 添加新进度
-            this.settings.recentBooks.unshift(progress);
+            const mergedMeta = mergeMetadata(undefined, progress.metadata);
+            this.settings.recentBooks.unshift(
+                mergedMeta ? { ...progress, metadata: mergedMeta } : progress
+            );
             // 限制最近书籍数量
             if (
                 this.settings.recentBooks.length > this.settings.maxRecentBooks
