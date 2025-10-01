@@ -38,10 +38,11 @@ export type ExportStorageMode =
 export interface ReadItSettings {
     // 通用设置
     fontSize: number;
-    fontFamily: string;
     lineHeight: number;
     pageWidth: number;
     theme: 'light' | 'dark' | 'auto';
+    // 字体偏好：是否优先使用书籍自带字体
+    preferBookFont: boolean;
 
     // 阅读进度
     recentBooks: EpubReadingProgress[];

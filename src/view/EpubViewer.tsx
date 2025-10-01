@@ -279,7 +279,8 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
     const { renderSection } = useRenderSection(
         book,
         viewerRef,
-        applyHighlightsForSection
+        applyHighlightsForSection,
+        plugin.settings.preferBookFont
     );
 
     // 在每次章节渲染后，抽取 h2.head 作为章节标题，并建立可见性监听
@@ -978,13 +979,20 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                 height: 100%;
                 background: transparent;
                 color: var(--text-normal);
-                font-family: ${plugin.settings.fontFamily};
                 font-size: ${plugin.settings.fontSize}px;
-                line-height: ${plugin.settings.lineHeight};
                 max-width: ${plugin.settings.pageWidth}px;
                 margin: 0 auto;
                 position: relative;
             `;
+            // 通过 CSS 变量管理行高，避免与书内样式、主题样式的优先级冲突
+            readerContainer.style.setProperty(
+                '--epub-line-height',
+                String(plugin.settings.lineHeight)
+            );
+            // 字体控制：默认使用 Obsidian 字体变量；当 preferBookFont=true 时不强制指定容器字体，允许书籍 CSS 覆盖
+            if (!plugin.settings.preferBookFont) {
+                readerContainer.style.fontFamily = 'var(--font-text)';
+            }
 
             viewerRef.current.appendChild(readerContainer);
 

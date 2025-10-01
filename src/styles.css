@@ -194,6 +194,16 @@ button:not(.clickable-icon).readit-button {
     }
 }
 
+.epub-reader-container .epub-reader-content p {
+    font-family: var(--font-text);
+    line-height: var(--epub-line-height, 1.6);
+}
+
+/* 使用 CSS 变量控制行高，避免内联样式的优先级问题 */
+.epub-reader-container .epub-reader-content {
+    line-height: var(--epub-line-height, 1.6);
+}
+
 .epub-reader-content > :last-child {
     padding-bottom: 20vh;
 }

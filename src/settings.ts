@@ -4,10 +4,10 @@ import { ReadItSettings } from './types';
 
 export const DEFAULT_SETTINGS: ReadItSettings = {
     fontSize: 16,
-    fontFamily: 'Georgia, serif',
     lineHeight: 1.6,
     pageWidth: 800,
     theme: 'auto',
+    preferBookFont: false,
     recentBooks: [],
     maxRecentBooks: 10,
     excerptSuccessNotification: true,
@@ -44,19 +44,18 @@ class ReadItSettingTab extends PluginSettingTab {
                     })
             );
 
+        // 不再在设置中选择字体，默认使用 Obsidian 字体变量 var(--font-text)
+
         new Setting(containerEl)
-            .setName('字体')
-            .setDesc('EPUB 内容的字体系列')
-            .addDropdown((dropdown) =>
-                dropdown
-                    .addOption('var(--font-text)', '默认')
-                    .addOption('Georgia, serif', 'Georgia (衬线)')
-                    .addOption('Arial, sans-serif', 'Arial (无衬线)')
-                    .addOption('Times New Roman, serif', 'Times New Roman')
-                    .addOption('Helvetica, sans-serif', 'Helvetica')
-                    .setValue(this.plugin.settings.fontFamily)
+            .setName('使用 EPUB 内置字体')
+            .setDesc(
+                '默认使用 Obsidian 字体变量 var(--font-text)；开启后优先使用书籍内置字体（自动提高优先级）'
+            )
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.preferBookFont)
                     .onChange(async (value) => {
-                        this.plugin.settings.fontFamily = value;
+                        this.plugin.settings.preferBookFont = value;
                         await this.plugin.saveSettings();
                     })
             );

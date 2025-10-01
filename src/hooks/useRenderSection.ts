@@ -3,7 +3,8 @@ import React from 'react';
 export function useRenderSection(
     book: any | null,
     viewerRef: React.RefObject<HTMLDivElement>,
-    applyHighlightsForSection: (sectionIndex: number) => Promise<void>
+    applyHighlightsForSection: (sectionIndex: number) => Promise<void>,
+    preferBookFont: boolean
 ) {
     const renderSection = React.useCallback(
         async (sectionIndex: number) => {
@@ -24,11 +25,144 @@ export function useRenderSection(
                 if (section.createDocument) {
                     const doc = await section.createDocument();
                     if (doc && doc.body) {
+                        // 收集并加载章节样式（内联 <style> 与外链 <link rel="stylesheet">）
+                        const collectedCss: string[] = [];
+                        try {
+                            // 1) 内联样式
+                            const inlineStyles = Array.from(
+                                doc.querySelectorAll('style')
+                            ) as HTMLStyleElement[];
+                            for (const s of inlineStyles) {
+                                const txt = s.textContent || '';
+                                if (txt) collectedCss.push(txt);
+                            }
+
+                            // 2) 外链样式
+                            const links = Array.from(
+                                doc.querySelectorAll(
+                                    'link[rel="stylesheet"][href]'
+                                )
+                            ) as HTMLLinkElement[];
+                            if (links.length) {
+                                const cssTexts = await Promise.all(
+                                    links.map(async (lnk) => {
+                                        try {
+                                            const href =
+                                                lnk.getAttribute('href') || '';
+                                            const absPath = section.resolveHref
+                                                ? section.resolveHref(href)
+                                                : href;
+                                            if (!absPath || !book?.loadBlob)
+                                                return '';
+                                            const blob =
+                                                await book.loadBlob(absPath);
+                                            if (!blob) return '';
+                                            const text = await (
+                                                blob as Blob
+                                            ).text();
+                                            return text || '';
+                                        } catch {
+                                            return '';
+                                        }
+                                    })
+                                );
+                                for (const t of cssTexts)
+                                    if (t) collectedCss.push(t);
+                            }
+                        } catch (e) {
+                            console.warn('收集章节样式失败：', e);
+                        }
+
                         // 渲染 HTML
                         readerContainer.innerHTML =
                             doc.body.innerHTML ||
                             doc.body.textContent ||
                             '无法加载内容';
+
+                        // 将样式注入容器（基础作用域处理：为选择器添加 .epub-reader-content 前缀，降低污染）
+                        if (collectedCss.length) {
+                            const scope = '.epub-reader-content';
+                            // 给字体声明加上 !important（当 preferBookFont=true 时，避免被 Obsidian 默认字体覆盖）
+                            const addImportantToFont = (css: string) => {
+                                if (!preferBookFont) return css;
+                                // 跳过 @font-face 片段
+                                const parts: string[] = [];
+                                const re = /@font-face\s*\{[\s\S]*?\}/gi;
+                                let last = 0;
+                                let m: RegExpExecArray | null;
+                                const processRules = (chunk: string) => {
+                                    // 为 font-family 与 font 简写添加 !important（若未添加）
+                                    let out = chunk.replace(
+                                        /font-family\s*:\s*([^;{}]+);/gi,
+                                        (full, val) => {
+                                            return /!\s*important/i.test(full)
+                                                ? full
+                                                : `font-family: ${val.trim()} !important;`;
+                                        }
+                                    );
+                                    out = out.replace(
+                                        /(^|[;{\s])font\s*:\s*([^;{}]+);/gi,
+                                        (full, p1, val) => {
+                                            return /!\s*important/i.test(full)
+                                                ? full
+                                                : `${p1}font: ${val.trim()} !important;`;
+                                        }
+                                    );
+                                    return out;
+                                };
+                                while ((m = re.exec(css)) !== null) {
+                                    const before = css.slice(last, m.index);
+                                    parts.push(processRules(before));
+                                    parts.push(m[0]); // 保持 @font-face 原样
+                                    last = m.index + m[0].length;
+                                }
+                                parts.push(processRules(css.slice(last)));
+                                return parts.join('');
+                            };
+                            const scopeCss = (css: string) => {
+                                try {
+                                    // 极简前缀：对每个规则左侧选择器添加作用域（不处理 @media/@font-face 等复杂情况）
+                                    // 基本适配：body -> .epub-reader-content
+                                    const replacedBody = css.replace(
+                                        /(^|[^-\w])body(?![-\w])/gi,
+                                        `$1${scope}`
+                                    );
+                                    const scoped = replacedBody.replace(
+                                        /([^{}]+)\{/g,
+                                        (m, sel) => {
+                                            if (/^\s*@/m.test(sel)) return m; // 跳过 @ 规则
+                                            const prefixed = sel
+                                                .split(',')
+                                                .map((s: string) => {
+                                                    const trimmed = s.trim();
+                                                    if (!trimmed)
+                                                        return trimmed;
+                                                    // 若选择器已包含作用域，跳过
+                                                    if (
+                                                        trimmed.startsWith(
+                                                            scope
+                                                        )
+                                                    )
+                                                        return trimmed;
+                                                    return `${scope} ${trimmed}`;
+                                                })
+                                                .join(', ');
+                                            return `${prefixed}{`;
+                                        }
+                                    );
+                                    return addImportantToFont(scoped);
+                                } catch {
+                                    return css;
+                                }
+                            };
+
+                            const styleEl = document.createElement('style');
+                            styleEl.textContent = collectedCss
+                                .map((c) => scopeCss(c))
+                                .join('\n\n');
+                            // 将样式插入到章节容器顶部，确保优先级略高于文档默认
+                            readerContainer.prepend(styleEl);
+                        }
 
                         // 处理 IMG 资源
                         const images = readerContainer.querySelectorAll('img');
