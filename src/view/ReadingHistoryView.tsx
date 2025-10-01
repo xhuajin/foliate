@@ -84,8 +84,12 @@ const ReadingHistory: React.FC<ReadingHistoryProps> = ({
                   ...(book.metadata.language && {
                       language: book.metadata.language,
                   }),
-                  ...(book.metadata.published && {
-                      publisher: book.metadata.published,
+                  // 统一 publisher 优先级：publisher > published
+                  ...(((book.metadata as any).publisher ||
+                      (book.metadata as any).published) && {
+                      publisher:
+                          (book.metadata as any).publisher ||
+                          (book.metadata as any).published,
                   }),
                   ...(book.metadata.subject && {
                       subject: book.metadata.subject,

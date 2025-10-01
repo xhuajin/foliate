@@ -17,193 +17,39 @@ export function useExcerpts(
     book: any,
     viewerRef: React.RefObject<HTMLDivElement>
 ) {
-    const escapeRegExp = (s: string) =>
-        s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const getBaseName = (name: string) =>
         name.replace(/\.epub$/i, '') || '摘录';
     const getDir = (path: string) =>
         path.includes('/') ? path.substring(0, path.lastIndexOf('/')) : '';
 
-    const readFileIfExists = async (path: string): Promise<string | null> => {
-        const f = app.vault.getAbstractFileByPath(path);
-        if (f && f instanceof TFile) return await app.vault.read(f);
-        return null;
-    };
+    // const readFileIfExists = async (path: string): Promise<string | null> => {
+    //     const f = app.vault.getAbstractFileByPath(path);
+    //     if (f && f instanceof TFile) return await app.vault.read(f);
+    //     return null;
+    // };
 
-    const parseExcerptsFromMarkdown = (
-        md: string,
-        chapterIndex: number,
-        bookTitle: string,
-        chapterTitle?: string
-    ): Excerpt[] => {
-        const sectionNo = chapterIndex + 1;
-        const titleBare = bookTitle?.trim() || '';
-        const titleInBrackets = titleBare
-            ? `《${escapeRegExp(titleBare)}》`
-            : '';
-        const titleEither = titleBare
-            ? `(?:${titleInBrackets}|${escapeRegExp(titleBare)})`
-            : '';
-        const chapterTitleSafe =
-            chapterTitle && chapterTitle.length >= 2
-                ? escapeRegExp(chapterTitle.trim())
-                : '';
-
-        // 支持“第N章|节|回|页”，并兼容中文顿号/圆点分隔
-        const marker = `第\s*${sectionNo}\s*(?:章|节|回|页)`;
-        const markerOrTitle = chapterTitleSafe
-            ? `(?:${marker}|${chapterTitleSafe})`
-            : marker;
-
-        const results: Excerpt[] = [];
-
-        // 1) 新格式（per-book/single-note）：以 "> [!note] 书名 · 第N页" 开头，后续连续的 ">" 行为摘录内容
-        {
-            const lines = md.split(/\r?\n/);
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i];
-                const headerRe = new RegExp(
-                    `^>\s*\[!note\][^\n]*?(?:${titleEither})?[^\n]*?[·•]\s*${markerOrTitle}`,
-                    'i'
-                );
-                if (line && headerRe.test(line)) {
-                    const buf: string[] = [];
-                    let j = i + 1;
-                    while (j < lines.length) {
-                        const l = lines[j];
-                        if (!l || !l.startsWith('>')) break; // 只收集 blockquote 内容行
-                        if (/^>\s*\[!note\]/i.test(l)) break; // 下一个 note header 终止
-                        // 跳过纯 tag 行
-                        if (/^>\s*#/.test(l)) {
-                            j++;
-                            continue;
-                        }
-                        buf.push(l.replace(/^>\s?/, ''));
-                        j++;
-                    }
-                    const text = buf.join('\n').trim();
-                    if (text && text.length >= 3)
-                        results.push({
-                            excerpt: text,
-                            sourceFile: '',
-                            cfi: null,
-                        });
-                    i = j - 1;
-                }
-            }
-        }
-
-        // 2) 新格式（per-note）：正文后跟随形如 "> 《书名》 · 第N页" 的标记行，取其上一段正文作为摘录
-        if (results.length === 0) {
-            const lines = md.split(/\r?\n/);
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i];
-                const metaRe = new RegExp(
-                    `^>\s*(?:${titleEither}\s*[·•]\s*)?${markerOrTitle}(?:\s|$)`,
-                    'i'
-                );
-                if (line && metaRe.test(line)) {
-                    // 回溯上一段正文：向上收集直到遇到空行或 front matter 分隔或 blockquote
-                    const buf: string[] = [];
-                    let j = i - 1;
-                    let hitText = false;
-                    while (j >= 0) {
-                        const l = lines[j];
-                        if (!l || !l.trim()) {
-                            if (hitText) break; // 在已经收集过文本后遇到空行则终止
-                            j--;
-                            continue;
-                        }
-                        if (/^>\s*/.test(l)) break; // 上方是引用块则停止，避免跨段
-                        if (/^---\s*$/.test(l)) break; // front matter 边界
-                        buf.push(l);
-                        hitText = true;
-                        j--;
-                    }
-                    buf.reverse();
-                    const text = buf.join('\n').trim();
-                    if (text && text.length >= 3)
-                        results.push({
-                            excerpt: text,
-                            sourceFile: '',
-                            cfi: null,
-                        });
-                }
-            }
-        }
-
-        // 3) 旧格式兼容：引用块后跟 “— 摘录 · 《书名》 · 第N章/页 ...” 行
-        if (results.length === 0) {
-            const titlePart = titleEither ? `${titleEither}[\s·]*` : '';
-            const citationPart = `—\s*摘录[\s\S]*?${titlePart}(?:${markerOrTitle})`;
-            const regex = new RegExp(
-                `(^>.*(?:\n>.*)*)\n+\s*${citationPart}`,
-                'gmi'
-            );
-            for (const m of md.matchAll(regex)) {
-                const raw = (m[1] || '').trim();
-                if (!raw) continue;
-                const text = raw
-                    .split(/\n/)
-                    .map((line) => line.replace(/^>\s?/, ''))
-                    .join('\n')
-                    .trim();
-                if (text && text.length >= 3)
-                    results.push({
-                        excerpt: text,
-                        sourceFile: '',
-                        cfi: null,
-                    });
-            }
-        }
-
-        // 4) 旧格式的无书名兜底
-        if (results.length === 0) {
-            const citationPart = `—\s*摘录[\s\S]*?(?:${markerOrTitle})`;
-            const regex = new RegExp(
-                `(^>.*(?:\n>.*)*)\n+\s*${citationPart}`,
-                'gmi'
-            );
-            for (const m of md.matchAll(regex)) {
-                const raw = (m[1] || '').trim();
-                if (!raw) continue;
-                const text = raw
-                    .split(/\n/)
-                    .map((line) => line.replace(/^>\s?/, ''))
-                    .join('\n')
-                    .trim();
-                if (text && text.length >= 3)
-                    results.push({
-                        excerpt: text,
-                        sourceFile: '',
-                        cfi: null,
-                    });
-            }
-        }
-
-        return results;
-    };
+    // (old parseExcerptsFromMarkdown removed; keeping hooks lightweight)
 
     const collectExcerptsForChapter = async (
         sectionIndex: number
     ): Promise<Excerpt[]> => {
         const title = book?.metadata?.title || getBaseName(fileName);
         const dir = getDir(filePath);
-        const baseName = getBaseName(fileName);
+        // const baseName = getBaseName(fileName);
         const mode = plugin.settings.excerptStorageMode;
-        const sectionObj = book?.sections?.[sectionIndex] || {};
-        const chapterTitle: string | undefined =
-            sectionObj.title || sectionObj.label || undefined;
+        // const sectionObj = book?.sections?.[sectionIndex] || {};
+        // const chapterTitle: string | undefined =
+        //     sectionObj.title || sectionObj.label || undefined;
 
-        const fromContent = (content: string | null) =>
-            content
-                ? parseExcerptsFromMarkdown(
-                      content,
-                      sectionIndex,
-                      title,
-                      chapterTitle
-                  )
-                : [];
+        // const fromContent = (content: string | null) =>
+        //     content
+        //         ? parseExcerptsFromMarkdown(
+        //               content,
+        //               sectionIndex,
+        //               title,
+        //               chapterTitle
+        //           )
+        //         : [];
 
         const excerpts: Excerpt[] = [];
 
@@ -371,9 +217,8 @@ export function useExcerpts(
             } catch {
                 continue;
             }
-            const wrapper = document.createEl('span', {
-                cls: 'epub-highlight',
-            });
+            const wrapper = document.createElement('span');
+            wrapper.className = 'epub-highlight';
             if (phrase.sourceFile) {
                 wrapper.setAttribute('data-source-file', phrase.sourceFile);
             }

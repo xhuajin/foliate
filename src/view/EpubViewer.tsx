@@ -640,9 +640,8 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
 
         // 创建统一的 wrapper（附带来源与点击跳转）
         const createWrapper = () => {
-            const wrapper = document.createSpan({
-                cls: 'epub-highlight',
-            });
+            const wrapper = document.createElement('span');
+            wrapper.className = 'epub-highlight';
             if (targetFilePath) {
                 wrapper.setAttribute('data-source-file', targetFilePath);
                 wrapper.onclick = (e) => {
