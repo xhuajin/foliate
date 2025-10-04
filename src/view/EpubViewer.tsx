@@ -61,6 +61,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
     const [error, setError] = useState<string | null>(null);
     const [book, setBook] = useState<any>(null);
     const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+    const scrollToTopRef = useRef<HTMLDivElement>(null);
     const viewerRef = useRef<HTMLDivElement>(null);
     // 章节标题与可见性跟踪
     const [sectionTitle, setSectionTitle] = useState<string>('');
@@ -388,6 +389,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
     const { goToSection } = useSectionNav(
         app,
         book,
+        scrollToTopRef,
         viewerRef,
         renderSectionWithUpdate,
         saveProgress,
@@ -1090,7 +1092,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                 </div>
             </div>
 
-            <div className="epub-content h-full">
+            <div ref={scrollToTopRef} className="epub-content h-full">
                 {/* foliate-js 渲染区域 */}
                 <ContextMenu>
                     <ContextMenuTrigger>

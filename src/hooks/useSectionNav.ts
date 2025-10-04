@@ -6,6 +6,7 @@ import { t } from '@/lang/helpers';
 export function useSectionNav(
     app: App,
     book: any | null,
+    scrollToTopRef: React.RefObject<HTMLDivElement>,
     viewerRef: React.RefObject<HTMLDivElement>,
     renderSection: (index: number) => Promise<void>,
     saveProgress: (index: number) => Promise<void>,
@@ -23,13 +24,14 @@ export function useSectionNav(
             setCurrentSectionIndex(sectionIndex);
             await saveProgress(sectionIndex);
             await renderSection(sectionIndex).then(() => {
-                const epubContent = app.workspace
-                    .getActiveViewOfType(EpubReaderView)
-                    ?.containerEl.querySelector(
-                        '.epub-content'
-                    ) as HTMLElement | null;
-                if (epubContent) {
-                    epubContent.scrollTo({ top: 0 });
+                // 考虑到有点击目录跳转的情况，不应该使用 activeView。
+                // const epubContent = app.workspace
+                //     .getActiveViewOfType(EpubReaderView)
+                //     ?.containerEl.querySelector(
+                //         '.epub-content'
+                //     ) as HTMLElement | null;
+                if (scrollToTopRef.current) {
+                    scrollToTopRef.current.scrollTo({ top: 0 });
                 } else {
                     console.error(t('failedToScrollToTop'));
                 }
