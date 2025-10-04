@@ -60,6 +60,8 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [book, setBook] = useState<any>(null);
+    const entriesRef = useRef<any[] | null>(null);
+    const injectedFontRef = useRef<boolean>(false);
     const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
     const scrollToTopRef = useRef<HTMLDivElement>(null);
     const viewerRef = useRef<HTMLDivElement>(null);
@@ -154,6 +156,31 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
             try {
                 setIsLoading(true);
 
+                // 在加载新书前清理旧书遗留的字体与章节样式（如果 viewerRef 仍存在）
+                if (viewerRef.current) {
+                    try {
+                        const container = viewerRef.current.querySelector(
+                            '.epub-reader-content'
+                        ) as HTMLElement | null;
+                        if (container) {
+                            // 移除字体样式
+                            container
+                                .querySelectorAll(
+                                    'style[data-epub-fonts="true"]'
+                                )
+                                .forEach((el) => el.remove());
+                            // 移除章节样式
+                            container
+                                .querySelectorAll(
+                                    'style[data-epub-section-style="true"]'
+                                )
+                                .forEach((el) => el.remove());
+                        }
+                    } catch {}
+                }
+                // 重置字体注入标记（新书可以重新注入）
+                injectedFontRef.current = false;
+
                 // 使用静态导入的 EPUB
 
                 // 使用 Obsidian API 读取文件
@@ -185,6 +212,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                 });
                 const reader = new ZipReader(new BlobReader(blob));
                 const entries = await reader.getEntries();
+                entriesRef.current = entries;
                 const map = new Map(
                     entries.map((entry: any) => [entry.filename, entry])
                 );
@@ -967,6 +995,18 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
             // 清空容器
             viewerRef.current.innerHTML = '';
 
+            // 防御性清理：确保之前潜在残留的字体/章节样式被移除
+            try {
+                const staleFont = document.querySelectorAll(
+                    '.epub-reader-content style[data-epub-fonts="true"]'
+                );
+                staleFont.forEach((el) => el.remove());
+                const staleSections = document.querySelectorAll(
+                    '.epub-reader-content style[data-epub-section-style="true"]'
+                );
+                staleSections.forEach((el) => el.remove());
+            } catch {}
+
             // 检查是否有内容
             if (!book.sections || book.sections.length === 0) {
                 viewerRef.current.innerHTML = `<div class="p-4 text-center text-red-500">${t('noEpubContent')}</div>`;
@@ -998,6 +1038,16 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
 
             viewerRef.current.appendChild(readerContainer);
 
+            // preferBookFont: 注入 OEBPS/Fonts 内嵌字体（仅一次）
+            if (plugin.settings.preferBookFont && !injectedFontRef.current) {
+                try {
+                    await injectEmbeddedFonts(readerContainer);
+                    injectedFontRef.current = true;
+                } catch (e) {
+                    console.warn('注入内嵌字体失败：', e);
+                }
+            }
+
             // 渲染当前页面（可能是从保存的进度恢复的）
             await renderSectionWithUpdate(currentSectionIndex);
         } catch (err) {
@@ -1010,6 +1060,56 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                     (err instanceof Error ? err.message : String(err))
             );
         }
+    };
+
+    // 从 EPUB entries 中扫描 OEBPS/Fonts 下字体并注入
+    const injectEmbeddedFonts = async (container: HTMLElement) => {
+        if (!book || !entriesRef.current || !entriesRef.current.length) return;
+        const fontExt = /\.(ttf|otf|woff2?|woff)$/i;
+        const fontEntries = entriesRef.current
+            .map((e: any) => e.filename)
+            .filter(
+                (name: string) =>
+                    /(^|\/)OEBPS\/(Fonts|fonts)\//.test(name) &&
+                    fontExt.test(name)
+            );
+        if (!fontEntries.length) return;
+
+        const faces: string[] = [];
+        for (const path of fontEntries) {
+            try {
+                const blob = await (book as any).loadBlob?.(path);
+                if (!blob) continue;
+                const url = URL.createObjectURL(blob);
+                const familyBase = path.split('/').pop()!.replace(fontExt, '');
+                // 基础猜测：斜体/粗体判断（非常粗略，可后续增强）
+                const lower = familyBase.toLowerCase();
+                let fontStyle = 'normal';
+                let fontWeight = '400';
+                if (/(italic|oblique)/i.test(lower)) fontStyle = 'italic';
+                if (/bold/i.test(lower)) fontWeight = '700';
+                else if (/medium/i.test(lower)) fontWeight = '500';
+                else if (/light/i.test(lower)) fontWeight = '300';
+                const format = /\.woff2$/i.test(path)
+                    ? 'woff2'
+                    : /\.woff$/i.test(path)
+                      ? 'woff'
+                      : /\.otf$/i.test(path)
+                        ? 'opentype'
+                        : 'truetype';
+                faces.push(
+                    `@font-face { font-family: "${familyBase}"; src: url('${url}') format('${format}'); font-style: ${fontStyle}; font-weight: ${fontWeight}; font-display: swap; }`
+                );
+            } catch (e) {
+                console.debug('字体加载失败，跳过:', path, e);
+            }
+        }
+        if (!faces.length) return;
+        const styleEl = document.createElement('style');
+        styleEl.setAttribute('data-epub-fonts', 'true');
+        styleEl.textContent = faces.join('\n');
+        // 注入到阅读容器（不加作用域，让字体可被章节 CSS 正常引用）
+        container.prepend(styleEl);
     };
 
     // 组件卸载时清理观察器

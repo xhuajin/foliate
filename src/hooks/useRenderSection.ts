@@ -19,6 +19,14 @@ export function useRenderSection(
                 ) as HTMLElement | null;
                 if (!readerContainer) return;
 
+                // 在渲染新章节前，移除之前注入的章节级样式，避免跨章节污染
+                try {
+                    const oldStyles = readerContainer.querySelectorAll(
+                        'style[data-epub-section-style="true"]'
+                    );
+                    oldStyles.forEach((el) => el.remove());
+                } catch {}
+
                 readerContainer.innerHTML =
                     '<div class="p-4 text-center">加载中...</div>';
 
@@ -82,6 +90,195 @@ export function useRenderSection(
                         // 将样式注入容器（基础作用域处理：为选择器添加 .epub-reader-content 前缀，降低污染）
                         if (collectedCss.length) {
                             const scope = '.epub-reader-content';
+                            // 预过滤：移除指向本地 file:// 或 /mnt/us/ 的 @font-face，避免 Not allowed to load local resource 错误
+                            const stripIllegalFontFace = (css: string) => {
+                                try {
+                                    return css.replace(
+                                        /@font-face\s*\{[^}]*\}/gi,
+                                        (block) => {
+                                            return /(url\s*\(\s*['"]?(file:\/\/|\/?mnt\/us\/))/i.test(
+                                                block
+                                            )
+                                                ? ''
+                                                : block;
+                                        }
+                                    );
+                                } catch {
+                                    return css;
+                                }
+                            };
+                            // preferBookFont=false 时，直接移除全部 @font-face，避免无意义的字体加载与报错
+                            const stripAllFontFace = (css: string) =>
+                                css.replace(/@font-face\s*\{[\s\S]*?\}/gi, '');
+
+                            // 尝试解析 @font-face 中的 url()，将 EPUB 内部字体资源转换为 blob URL
+                            const inlineFontFaceResources = async (
+                                css: string
+                            ): Promise<string> => {
+                                if (!preferBookFont)
+                                    return stripAllFontFace(css);
+                                const fontFaceRe =
+                                    /@font-face\s*\{[\s\S]*?\}/gi;
+                                return await (async () => {
+                                    const blocks: string[] = [];
+                                    let lastIndex = 0;
+                                    let m: RegExpExecArray | null;
+                                    while (
+                                        (m = fontFaceRe.exec(css)) !== null
+                                    ) {
+                                        const before = css.slice(
+                                            lastIndex,
+                                            m.index
+                                        );
+                                        if (before) blocks.push(before);
+                                        let block = m[0];
+                                        // 解析 url()
+                                        const urlRe =
+                                            /url\(\s*(['"]?)([^)"']+)\1\s*\)/gi;
+                                        let um: RegExpExecArray | null;
+                                        const replacements: {
+                                            original: string;
+                                            repl: string;
+                                        }[] = [];
+                                        while (
+                                            (um = urlRe.exec(block)) !== null
+                                        ) {
+                                            const full = um[0];
+                                            const rawPath: string = (
+                                                um[2] || ''
+                                            ).trim();
+                                            // 跳过 data:, http(s):, blob:
+                                            if (
+                                                !rawPath ||
+                                                /^(data:|https?:|blob:)/i.test(
+                                                    rawPath
+                                                )
+                                            )
+                                                continue;
+                                            // 跳过绝对的 app:// 或 file:// （已在前面 stripIllegalFontFace 处理 file://，app:// 说明已变成无法解析的相对根路径）
+                                            if (
+                                                /^(app:\/\/|file:\/\/)/i.test(
+                                                    rawPath
+                                                )
+                                            ) {
+                                                // 移除此 @font-face 整块
+                                                block = '';
+                                                break;
+                                            }
+                                            // 解析相对路径，基于 section.href
+                                            try {
+                                                const sectionHref =
+                                                    section.href || '';
+                                                const sectionDir =
+                                                    sectionHref.includes('/')
+                                                        ? sectionHref.substring(
+                                                              0,
+                                                              sectionHref.lastIndexOf(
+                                                                  '/'
+                                                              )
+                                                          )
+                                                        : '';
+                                                const candidates: string[] = [];
+                                                const norm = rawPath.replace(
+                                                    /^\.\//,
+                                                    ''
+                                                );
+                                                if (norm.startsWith('/')) {
+                                                    candidates.push(
+                                                        norm.slice(1)
+                                                    );
+                                                } else if (
+                                                    norm.startsWith('../')
+                                                ) {
+                                                    // 处理 ../ 回溯
+                                                    const parts =
+                                                        norm.split('/');
+                                                    const dirParts = sectionDir
+                                                        ? sectionDir.split('/')
+                                                        : [];
+                                                    let up = 0;
+                                                    for (const p of parts) {
+                                                        if (p === '..') up++;
+                                                        else break;
+                                                    }
+                                                    const remain = parts
+                                                        .slice(up)
+                                                        .join('/');
+                                                    const base = dirParts.slice(
+                                                        0,
+                                                        dirParts.length - up
+                                                    );
+                                                    candidates.push(
+                                                        [...base, remain].join(
+                                                            '/'
+                                                        )
+                                                    );
+                                                } else {
+                                                    candidates.push(
+                                                        sectionDir
+                                                            ? sectionDir +
+                                                                  '/' +
+                                                                  norm
+                                                            : norm
+                                                    );
+                                                }
+                                                // 常见大小写变体
+                                                candidates.push(
+                                                    ...candidates.map((c) =>
+                                                        c.replace(
+                                                            /^Fonts\//,
+                                                            'fonts/'
+                                                        )
+                                                    )
+                                                );
+                                                let blobUrl: string | null =
+                                                    null;
+                                                for (const c of candidates) {
+                                                    try {
+                                                        const b =
+                                                            await book.loadBlob(
+                                                                c
+                                                            );
+                                                        if (b) {
+                                                            blobUrl =
+                                                                URL.createObjectURL(
+                                                                    b
+                                                                );
+                                                            // 计划后续可统一释放；当前章节切换时容器被替换可认为浏览器自行 GC
+                                                            replacements.push({
+                                                                original: full,
+                                                                repl: `url('${blobUrl}')`,
+                                                            });
+                                                            break;
+                                                        }
+                                                    } catch {}
+                                                }
+                                                if (!blobUrl) {
+                                                    // 找不到资源，移除整个 @font-face 块避免 404
+                                                    block = '';
+                                                    break;
+                                                }
+                                            } catch {
+                                                block = '';
+                                                break;
+                                            }
+                                        }
+                                        if (block) {
+                                            for (const r of replacements) {
+                                                block = block.replace(
+                                                    r.original,
+                                                    r.repl
+                                                );
+                                            }
+                                        }
+                                        blocks.push(block);
+                                        lastIndex = fontFaceRe.lastIndex;
+                                    }
+                                    const tail = css.slice(lastIndex);
+                                    if (tail) blocks.push(tail);
+                                    return blocks.join('');
+                                })();
+                            };
                             // 给字体声明加上 !important（当 preferBookFont=true 时，避免被 Obsidian 默认字体覆盖）
                             const addImportantToFont = (css: string) => {
                                 if (!preferBookFont) return css;
@@ -156,10 +353,19 @@ export function useRenderSection(
                                 }
                             };
 
+                            const processed: string[] = [];
+                            for (const rawCss of collectedCss) {
+                                let css = stripIllegalFontFace(rawCss);
+                                css = await inlineFontFaceResources(css);
+                                css = scopeCss(css);
+                                processed.push(css);
+                            }
                             const styleEl = document.createElement('style');
-                            styleEl.textContent = collectedCss
-                                .map((c) => scopeCss(c))
-                                .join('\n\n');
+                            styleEl.setAttribute(
+                                'data-epub-section-style',
+                                'true'
+                            );
+                            styleEl.textContent = processed.join('\n\n');
                             // 将样式插入到章节容器顶部，确保优先级略高于文档默认
                             readerContainer.prepend(styleEl);
                         }
@@ -326,7 +532,7 @@ export function useRenderSection(
                 }
             }
         },
-        [book, viewerRef, applyHighlightsForSection]
+        [book, viewerRef, applyHighlightsForSection, preferBookFont]
     );
 
     return { renderSection } as const;
