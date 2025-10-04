@@ -49,6 +49,7 @@ export default {
     failedToDeleteExcerptFile: '删除摘录文件失败',
     excerptCopiedToClipboard: '摘录已复制到剪贴板',
     noShareableContent: '没有可分享的内容',
+    failedToScrollToTop: '滚动到页面顶部失败',
 
     // 摘录创建
     createdExcerpt: '已创建摘录：',

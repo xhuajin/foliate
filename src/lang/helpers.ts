@@ -3,33 +3,17 @@ import { getLanguage } from 'obsidian';
 import en from './locale/en';
 import zhCN from './locale/zh-cn';
 
-declare const PLUGIN_LANGUAGES: Record<string, string>;
-declare var LZString: any;
-
 let locale: Partial<typeof en> | null = null;
 
 function loadLocale(lang: string): Partial<typeof en> {
-    // if (lang === 'zh') lang = 'zh-cn';
-    // if (PLUGIN_LANGUAGES && Object.keys(PLUGIN_LANGUAGES).includes(lang)) {
-    //     const decompressed = LZString.decompressFromBase64(
-    //         PLUGIN_LANGUAGES[lang]
-    //     );
-    //     let x = {};
-    //     eval(decompressed);
-    //     return x;
-    // } else {
-    //     // Local fallback without PLUGIN_LANGUAGES bundle
-    //     if (lang === 'zh-cn') return zhCN;
-    //     return en;
-    // }
-    if (getLanguage() === 'zh') return zhCN;
+    if (lang === 'zh') return zhCN;
     return en;
 }
 
 export function t(str: keyof typeof en): string {
     if (!locale) {
         // const LOCALE = localStorage.getItem('language')?.toLowerCase() || 'en';
-        const LOCALE = getLanguage() || 'en';
+        const LOCALE = getLanguage()?.toLowerCase() || 'en';
         locale = loadLocale(LOCALE);
     }
     return (locale && locale[str]) || en[str];

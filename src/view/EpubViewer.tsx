@@ -1090,9 +1090,6 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                 </div>
             </div>
 
-            {/* 用于定位，在点击下一页时滚动到顶部 */}
-            <div className="epub-content-top"></div>
-
             <div className="epub-content h-full">
                 {/* foliate-js 渲染区域 */}
                 <ContextMenu>

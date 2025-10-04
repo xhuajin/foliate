@@ -49,6 +49,7 @@ export default {
     deletedExcerptFile: 'Excerpt file deleted',
     failedToDeleteExcerptFile: 'Failed to delete excerpt file',
     excerptCopiedToClipboard: 'Excerpt copied to clipboard',
+    failedToScrollToTop: 'Failed to scroll to top',
 
     // Excerpt creation
     createdExcerpt: 'Excerpt created: ',
