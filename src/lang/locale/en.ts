@@ -86,4 +86,40 @@ export default {
     processedTocEmpty: 'Processed TOC is empty',
     rawTocCount: 'Original TOC items: ',
     current: 'Current',
+
+    // Settings (names & descriptions)
+    settings_fontSize_name: 'Font size',
+    settings_fontSize_desc: 'Font size (px) for EPUB content',
+    settings_preferBookFont_name: 'Use embedded EPUB fonts',
+    settings_preferBookFont_desc:
+        'When off, use Obsidian font var(--font-text); when on, prefer fonts declared in the book (and embedded OEBPS/Fonts).',
+    settings_lineHeight_name: 'Line height',
+    settings_lineHeight_desc: 'Line height of text content',
+    settings_pageWidth_name: 'Page width',
+    settings_pageWidth_desc: 'Maximum width (px) of reading area',
+    settings_reading_heading: 'Reading',
+    settings_autoSaveProgress_name: 'Auto save progress',
+    settings_autoSaveProgress_desc:
+        'Automatically store reading progress and position',
+    settings_showReadingProgress_name: 'Show reading progress',
+    settings_showReadingProgress_desc: 'Display reading progress information',
+    settings_maxRecentBooks_name: 'Recent books count',
+    settings_maxRecentBooks_desc: 'Number of recent books to keep',
+    settings_excerpt_heading: 'Excerpt',
+    settings_excerptSuccessNotification_name: 'Show success notice',
+    settings_excerptSuccessNotification_desc:
+        'Show a notice when an excerpt is created',
+    settings_recent_heading: 'Recent reading',
+    settings_actions_heading: 'Actions',
+    settings_cleanupOldProgress_name: 'Clean outdated records',
+    settings_cleanupOldProgress_desc:
+        'Remove reading records older than 30 days',
+    settings_cleanup_button: 'Clean',
+    settings_clearAllProgress_name: 'Clear all reading records',
+    settings_clearAllProgress_desc:
+        'Remove ALL stored reading progress (irreversible)',
+    settings_clearAllProgress_button: 'Clear all',
+    settings_clearAllProgress_confirm:
+        'This will delete ALL reading records. Continue?',
+    settings_clearAllProgress_done: 'All reading records cleared',
 };

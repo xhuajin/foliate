@@ -1,6 +1,7 @@
 import { PluginSettingTab, App, Setting, Notice } from 'obsidian';
 import FoliatePlugin from './main';
 import { FoliateSettings } from './types';
+import { t } from '@/lang/helpers';
 
 export const DEFAULT_SETTINGS: FoliateSettings = {
     fontSize: 16,
@@ -31,8 +32,8 @@ class FoliateSettingTab extends PluginSettingTab {
 
         // 字体设置
         new Setting(containerEl)
-            .setName('字体大小')
-            .setDesc('EPUB 内容的字体大小（像素）')
+            .setName(t('settings_fontSize_name'))
+            .setDesc(t('settings_fontSize_desc'))
             .addSlider((slider) =>
                 slider
                     .setLimits(12, 24, 1)
@@ -47,10 +48,8 @@ class FoliateSettingTab extends PluginSettingTab {
         // 不再在设置中选择字体，默认使用 Obsidian 字体变量 var(--font-text)
 
         new Setting(containerEl)
-            .setName('使用 EPUB 内置字体')
-            .setDesc(
-                '默认使用 Obsidian 字体变量 var(--font-text)；开启后优先使用书籍内置字体（自动提高优先级）'
-            )
+            .setName(t('settings_preferBookFont_name'))
+            .setDesc(t('settings_preferBookFont_desc'))
             .addToggle((toggle) =>
                 toggle
                     .setValue(this.plugin.settings.preferBookFont)
@@ -61,8 +60,8 @@ class FoliateSettingTab extends PluginSettingTab {
             );
 
         new Setting(containerEl)
-            .setName('行高')
-            .setDesc('文本行间距')
+            .setName(t('settings_lineHeight_name'))
+            .setDesc(t('settings_lineHeight_desc'))
             .addSlider((slider) =>
                 slider
                     .setLimits(1.2, 2.0, 0.1)
@@ -75,8 +74,8 @@ class FoliateSettingTab extends PluginSettingTab {
             );
 
         new Setting(containerEl)
-            .setName('页面宽度')
-            .setDesc('阅读区域的最大宽度（像素）')
+            .setName(t('settings_pageWidth_name'))
+            .setDesc(t('settings_pageWidth_desc'))
             .addSlider((slider) =>
                 slider
                     .setLimits(600, 1200, 50)
@@ -89,11 +88,13 @@ class FoliateSettingTab extends PluginSettingTab {
             );
 
         // 阅读设置
-        new Setting(containerEl).setName('阅读设置').setHeading();
+        new Setting(containerEl)
+            .setName(t('settings_reading_heading'))
+            .setHeading();
 
         new Setting(containerEl)
-            .setName('自动保存进度')
-            .setDesc('自动保存阅读进度和位置')
+            .setName(t('settings_autoSaveProgress_name'))
+            .setDesc(t('settings_autoSaveProgress_desc'))
             .addToggle((toggle) =>
                 toggle
                     .setValue(this.plugin.settings.autoSaveProgress)
@@ -104,8 +105,8 @@ class FoliateSettingTab extends PluginSettingTab {
             );
 
         new Setting(containerEl)
-            .setName('显示阅读进度')
-            .setDesc('在界面中显示阅读进度信息')
+            .setName(t('settings_showReadingProgress_name'))
+            .setDesc(t('settings_showReadingProgress_desc'))
             .addToggle((toggle) =>
                 toggle
                     .setValue(this.plugin.settings.showReadingProgress)
@@ -116,8 +117,8 @@ class FoliateSettingTab extends PluginSettingTab {
             );
 
         new Setting(containerEl)
-            .setName('最近阅读记录数')
-            .setDesc('保留最近阅读的书籍数量')
+            .setName(t('settings_maxRecentBooks_name'))
+            .setDesc(t('settings_maxRecentBooks_desc'))
             .addSlider((slider) =>
                 slider
                     .setLimits(5, 20, 1)
@@ -129,11 +130,13 @@ class FoliateSettingTab extends PluginSettingTab {
                     })
             );
 
-        new Setting(containerEl).setName('摘录').setHeading();
+        new Setting(containerEl)
+            .setName(t('settings_excerpt_heading'))
+            .setHeading();
 
         new Setting(containerEl)
-            .setName('摘录成功是否提示')
-            .setDesc('摘录成功后是否显示提示')
+            .setName(t('settings_excerptSuccessNotification_name'))
+            .setDesc(t('settings_excerptSuccessNotification_desc'))
             .addToggle((toggle) =>
                 toggle
                     .setValue(this.plugin.settings.excerptSuccessNotification)
@@ -184,7 +187,9 @@ class FoliateSettingTab extends PluginSettingTab {
 
         // 最近阅读的书籍
         if (this.plugin.settings.recentBooks.length > 0) {
-            new Setting(containerEl).setName('最近阅读').setHeading();
+            new Setting(containerEl)
+                .setName(t('settings_recent_heading'))
+                .setHeading();
 
             const recentBooks = this.plugin.getRecentBooks();
             for (const book of recentBooks.slice(0, 5)) {
@@ -225,17 +230,40 @@ class FoliateSettingTab extends PluginSettingTab {
         }
 
         // 操作按钮
-        new Setting(containerEl).setName('操作').setHeading();
+        new Setting(containerEl)
+            .setName(t('settings_actions_heading'))
+            .setHeading();
 
         new Setting(containerEl)
-            .setName('清理过期记录')
-            .setDesc('清理30天前的阅读记录')
+            .setName(t('settings_cleanupOldProgress_name'))
+            .setDesc(t('settings_cleanupOldProgress_desc'))
             .addButton((button) =>
-                button.setButtonText('清理').onClick(async () => {
-                    await this.plugin.cleanupOldProgress();
-                    new Notice('已清理过期的阅读记录');
-                    this.display(); // 刷新界面
-                })
+                button
+                    .setButtonText(t('settings_cleanup_button'))
+                    .onClick(async () => {
+                        await this.plugin.cleanupOldProgress();
+                        new Notice(t('settings_cleanupOldProgress_name'));
+                        this.display(); // 刷新界面
+                    })
+            );
+
+        // 清理所有阅读记录
+        new Setting(containerEl)
+            .setName(t('settings_clearAllProgress_name'))
+            .setDesc(t('settings_clearAllProgress_desc'))
+            .addButton((button) =>
+                button
+                    .setWarning()
+                    .setButtonText(t('settings_clearAllProgress_button'))
+                    .onClick(async () => {
+                        const confirmed = confirm(
+                            t('settings_clearAllProgress_confirm')
+                        );
+                        if (!confirmed) return;
+                        await this.plugin.clearAllReadingProgress();
+                        new Notice(t('settings_clearAllProgress_done'));
+                        this.display();
+                    })
             );
     }
 }

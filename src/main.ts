@@ -235,6 +235,12 @@ export default class FoliatePlugin extends Plugin {
         await this.saveSettings();
     }
 
+    // 清空所有阅读记录（不可恢复）
+    async clearAllReadingProgress(): Promise<void> {
+        this.settings.recentBooks = [];
+        await this.saveSettings();
+    }
+
     showNotice(): void {
         new Notice(
             'Foliate Plugin activated! Built with Vite & Tailwind CSS 4',
