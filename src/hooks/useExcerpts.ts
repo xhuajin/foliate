@@ -1,6 +1,6 @@
 import { App, TFile } from 'obsidian';
 import React from 'react';
-import type ReadItPlugin from '../main';
+import type FoliatePlugin from '../main';
 // import { getAllDailyNotes } from 'obsidian-daily-notes-interface';
 
 type Excerpt = {
@@ -11,7 +11,7 @@ type Excerpt = {
 
 export function useExcerpts(
     app: App,
-    plugin: ReadItPlugin,
+    plugin: FoliatePlugin,
     filePath: string,
     fileName: string,
     book: any,
@@ -105,7 +105,7 @@ export function useExcerpts(
 
         // if (mode === 'single-note') {
         //     const mdPath =
-        //         plugin.settings.singleExcerptPath || '_ReadIt_摘录.md';
+        //         plugin.settings.singleExcerptPath || '_Foliate_摘录.md';
         //     const content = await readFileIfExists(mdPath);
         //     const arr = fromContent(content);
         //     return arr.map((e) => ({ ...e, sourceFile: mdPath }));

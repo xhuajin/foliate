@@ -1,8 +1,8 @@
 import { PluginSettingTab, App, Setting, Notice } from 'obsidian';
-import ReadItPlugin from './main';
-import { ReadItSettings } from './types';
+import FoliatePlugin from './main';
+import { FoliateSettings } from './types';
 
-export const DEFAULT_SETTINGS: ReadItSettings = {
+export const DEFAULT_SETTINGS: FoliateSettings = {
     fontSize: 16,
     lineHeight: 1.6,
     pageWidth: 800,
@@ -17,10 +17,10 @@ export const DEFAULT_SETTINGS: ReadItSettings = {
     showReadingProgress: true,
 };
 
-class ReadItSettingTab extends PluginSettingTab {
-    plugin: ReadItPlugin;
+class FoliateSettingTab extends PluginSettingTab {
+    plugin: FoliatePlugin;
 
-    constructor(app: App, plugin: ReadItPlugin) {
+    constructor(app: App, plugin: FoliatePlugin) {
         super(app, plugin);
         this.plugin = plugin;
     }
@@ -240,4 +240,4 @@ class ReadItSettingTab extends PluginSettingTab {
     }
 }
 
-export default ReadItSettingTab;
+export default FoliateSettingTab;

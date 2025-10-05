@@ -35,7 +35,7 @@ export type ExportStorageMode =
     | 'per-book'
     | 'single-note';
 
-export interface ReadItSettings {
+export interface FoliateSettings {
     // 通用设置
     fontSize: number;
     lineHeight: number;

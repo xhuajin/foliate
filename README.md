@@ -1,4 +1,4 @@
-# Obsidian ReadIt
+# Obsidian Foliate
 
 ![Preview Image](./docs/preview-image.png)
 

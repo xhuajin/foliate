@@ -1,7 +1,7 @@
 import { ItemView, WorkspaceLeaf, TFile, Notice } from 'obsidian';
 import { createRoot, Root } from 'react-dom/client';
 import * as React from 'react';
-import type ReadItPlugin from '../main';
+import type FoliatePlugin from '../main';
 import { BentoGrid, ReadingBentoCard } from '../components/ui/bento-grid';
 import { CoverFlow, type CoverFlowItem } from '../components/ui/coverflow';
 import {
@@ -17,7 +17,7 @@ import { t } from '@/lang/helpers';
 export const READING_HISTORY_VIEW_TYPE = 'reading-history-view';
 
 interface ReadingHistoryProps {
-    plugin: ReadItPlugin;
+    plugin: FoliatePlugin;
     onOpenBook: (filePath: string) => void;
 }
 
@@ -207,9 +207,9 @@ const ReadingHistory: React.FC<ReadingHistoryProps> = ({
 
 export class ReadingHistoryView extends ItemView {
     private root: Root | null = null;
-    private plugin: ReadItPlugin;
+    private plugin: FoliatePlugin;
 
-    constructor(leaf: WorkspaceLeaf, plugin: ReadItPlugin) {
+    constructor(leaf: WorkspaceLeaf, plugin: FoliatePlugin) {
         super(leaf);
         this.plugin = plugin;
     }

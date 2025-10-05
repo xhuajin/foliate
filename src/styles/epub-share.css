@@ -2,25 +2,25 @@
  * 分享样式
  */
 
-.modal.readit-modal-content,
-.modal-content.readit-share-modal {
+.modal.foliate-modal-content,
+.modal-content.foliate-share-modal {
     width: fit-content;
 }
 
-.readit-share-wrapper {
+.foliate-share-wrapper {
     position: fixed;
     left: -99999px;
     top: -99999px;
     z-index: 99999;
 }
 
-.readit-share-body {
+.foliate-share-body {
     padding-left: 3rem;
     padding-right: 3rem;
     margin: 1rem 0;
 }
 
-.readit-share-footer {
+.foliate-share-footer {
     display: flex;
     justify-content: flex-end;
     padding: 0.5rem 3rem 1rem 3rem;
@@ -30,7 +30,7 @@
 /* =============================
    Share Card (image export)
    ============================= */
-.readit-share-card {
+.foliate-share-card {
     background: var(--background-secondary);
     color: var(--text-normal);
     border: 1px solid var(--background-modifier-border);
@@ -43,61 +43,61 @@
     gap: 16px;
 }
 
-.readit-share-card-header {
+.foliate-share-card-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
 }
 
-.readit-share-card-head-left {
+.foliate-share-card-head-left {
     display: flex;
     flex-direction: column;
     gap: 4px;
 }
 
-.readit-share-card-title {
+.foliate-share-card-title {
     font-size: 20px;
     font-weight: 700;
 }
 
-.readit-share-card-meta,
-.readit-share-card-badge,
-.readit-share-card-footer,
-.readit-share-card-footer span {
+.foliate-share-card-meta,
+.foliate-share-card-badge,
+.foliate-share-card-footer,
+.foliate-share-card-footer span {
     color: var(--text-muted);
 }
 
-.readit-share-card-meta {
+.foliate-share-card-meta {
     font-size: 13px;
 }
 
-.readit-share-card-badge {
+.foliate-share-card-badge {
     font-size: 12px;
 }
 
-.readit-share-card-body {
+.foliate-share-card-body {
     white-space: pre-wrap;
     word-break: break-word;
     padding: 12px 0 8px 0;
 }
 
 /* Body variants */
-.readit-share-card-body.classic {
+.foliate-share-card-body.classic {
     border-left: 4px solid var(--background-modifier-border);
     padding-left: 16px;
 }
 
-.readit-share-card-body.minimal {
+.foliate-share-card-body.minimal {
     opacity: 0.98;
 }
 
 /* Image-left layout */
-.readit-share-card-row {
+.foliate-share-card-row {
     display: flex;
     gap: 16px;
 }
 
-.readit-share-card-left {
+.foliate-share-card-left {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -105,19 +105,19 @@
     width: 88px;
 }
 
-.readit-share-cover-lg {
+.foliate-share-cover-lg {
     width: 88px;
     height: 88px;
     object-fit: cover;
     border-radius: 8px;
 }
 
-.readit-share-card-textwrap {
+.foliate-share-card-textwrap {
     flex: 1 1 auto;
     width: fit-content;
 }
 
-.readit-share-card-footer {
+.foliate-share-card-footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -125,13 +125,13 @@
     font-size: 12px;
 }
 
-.readit-share-card-footer-right {
+.foliate-share-card-footer-right {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.readit-share-cover-sm {
+.foliate-share-cover-sm {
     width: 24px;
     height: 24px;
     object-fit: cover;

@@ -1,5 +1,5 @@
 {
-    "name": "readit-obsidian-plugin",
+    "name": "foliate-obsidian-plugin",
     "version": "1.0.0",
     "description": "An Obsidian plugin built with Vite and Tailwind CSS 4",
     "main": "main.js",

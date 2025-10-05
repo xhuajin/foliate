@@ -1,9 +1,9 @@
 {
-    "id": "readit",
-    "name": "ReadIt",
+    "id": "foliate",
+    "name": "Foliate",
     "version": "1.0.4",
     "minAppVersion": "1.4.0",
-    "description": "An EPUB reader plugin for Obsidian.",
+    "description": "Read e-books in style with Foliate, a simple and modern e-book viewer.",
     "author": "Huajin",
     "authorUrl": "https://github.com/xhuajin",
     "isDesktopOnly": true

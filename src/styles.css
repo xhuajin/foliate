@@ -81,14 +81,14 @@
 }
 
 /* Custom components */
-.readit-plugin {
+.foliate-plugin {
     @apply border rounded-lg;
     padding: 1rem;
     border-color: var(--border);
     background: var(--background);
 }
 
-button:not(.clickable-icon).readit-button {
+button:not(.clickable-icon).foliate-button {
     height: auto;
     display: flex;
     align-items: center;
@@ -105,16 +105,16 @@ button:not(.clickable-icon).readit-button {
     line-height: 2;
 }
 
-.readit-button:hover:not(:disabled) {
+.foliate-button:hover:not(:disabled) {
     background-color: var(--background-modifier-hover);
 }
 
-.readit-button:disabled {
+.foliate-button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
 
-.readit-input {
+.foliate-input {
     display: flex;
     height: 2.5rem;
     width: 100%;
@@ -126,7 +126,7 @@ button:not(.clickable-icon).readit-button {
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.readit-input:focus {
+.foliate-input:focus {
     outline: none;
     box-shadow: 0 0 0 2px var(--ring);
 }

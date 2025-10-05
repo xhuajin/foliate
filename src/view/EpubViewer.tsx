@@ -7,7 +7,7 @@ import {
     getDailyNote,
 } from 'obsidian-daily-notes-interface';
 import { EPUB } from 'foliate-js/epub.js';
-import type ReadItPlugin from '../main';
+import type FoliatePlugin from '../main';
 import {
     ContextMenu,
     ContextMenuContent,
@@ -48,7 +48,7 @@ interface EpubViewerProps {
     filePath: string;
     fileName: string;
     app: App; // 添加 app 参数以访问 Obsidian API
-    plugin: ReadItPlugin; // 添加插件实例
+    plugin: FoliatePlugin; // 添加插件实例
 }
 
 const EpubViewer: React.FC<EpubViewerProps> = ({
@@ -918,9 +918,9 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
             }
 
             case 'single-note': {
-                // 使用单一文件收集所有摘录；默认放在库根目录下 _ReadIt_摘录.md
+                // 使用单一文件收集所有摘录；默认放在库根目录下 _Foliate_摘录.md
                 let notePath =
-                    plugin.settings.singleExcerptPath || '_ReadIt_摘录.md';
+                    plugin.settings.singleExcerptPath || '_Foliate_摘录.md';
 
                 const now = new Date();
                 const timeStr = `${now.getFullYear()}-${String(
@@ -1169,18 +1169,18 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                     {sectionTitle || book?.metadata?.title || fileName}
                 </div>
                 <div className="epub-header-controls">
-                    <button className="readit-button" onClick={toggleTOC}>
+                    <button className="foliate-button" onClick={toggleTOC}>
                         {t('toc')}
                     </button>
                     <button
-                        className="readit-button"
+                        className="foliate-button"
                         onClick={goToPrevSection}
                         disabled={currentSectionIndex === 0}
                     >
                         {t('prevPage')}
                     </button>
                     <button
-                        className="readit-button"
+                        className="foliate-button"
                         onClick={goToNextSection}
                         disabled={
                             !book?.sections ||

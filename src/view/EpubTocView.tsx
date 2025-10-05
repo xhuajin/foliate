@@ -1,7 +1,7 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import { createRoot, Root } from 'react-dom/client';
 import { createElement, useEffect, useMemo } from 'react';
-import type ReadItPlugin from '../main';
+import type FoliatePlugin from '../main';
 
 import { useTree } from '@headless-tree/react';
 import { Tree, TreeItem, TreeItemLabel } from '../components/ui/tree';
@@ -39,7 +39,7 @@ interface EpubTocProps {
     tocItems: Record<string, TocItem>;
     currentSectionIndex: number;
     onSectionSelect: (sectionIndex: number) => void;
-    plugin: ReadItPlugin;
+    plugin: FoliatePlugin;
 }
 
 // TOC 组件属性
@@ -47,7 +47,7 @@ interface EpubTocProps {
     book: any;
     currentSectionIndex: number;
     onSectionSelect: (sectionIndex: number) => void;
-    plugin: ReadItPlugin;
+    plugin: FoliatePlugin;
 }
 
 // React TOC 组件
@@ -341,12 +341,12 @@ const EpubToc: React.FC<EpubTocProps> = ({
 // Obsidian 视图类
 export class EpubTocView extends ItemView {
     private root: Root | null = null;
-    private plugin: ReadItPlugin;
+    private plugin: FoliatePlugin;
     private book: any = null;
     private currentSectionIndex: number = 0;
     private onSectionSelect: ((sectionIndex: number) => void) | null = null;
 
-    constructor(leaf: WorkspaceLeaf, plugin: ReadItPlugin) {
+    constructor(leaf: WorkspaceLeaf, plugin: FoliatePlugin) {
         super(leaf);
         this.plugin = plugin;
     }

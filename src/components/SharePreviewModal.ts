@@ -40,8 +40,8 @@ export class SharePreviewModal extends Modal {
     override onOpen(): void {
         const { modalEl, contentEl } = this;
         contentEl.empty();
-        modalEl.classList.add('readit-modal-content');
-        contentEl.addClass('readit-share-modal');
+        modalEl.classList.add('foliate-modal-content');
+        contentEl.addClass('foliate-share-modal');
 
         new Setting(contentEl).setName(this.titleText).setHeading();
         // 宽度控制：同时作用于预览容器与真实截图节点
@@ -92,7 +92,7 @@ export class SharePreviewModal extends Modal {
                 });
         });
 
-        const body = contentEl.createEl('div', { cls: 'readit-share-body' });
+        const body = contentEl.createEl('div', { cls: 'foliate-share-body' });
         // 放入卡片的克隆，避免引用外部节点
         this.previewEl = this.cardEl.cloneNode(true) as HTMLElement;
         body.appendChild(this.previewEl);
@@ -101,7 +101,7 @@ export class SharePreviewModal extends Modal {
         this.previewEl.style.maxWidth = `${initialWidth}px`;
 
         const footer = contentEl.createEl('div', {
-            cls: 'readit-share-footer',
+            cls: 'foliate-share-footer',
         });
 
         const downloadBtn = footer.createEl('button', {

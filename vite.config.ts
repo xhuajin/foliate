@@ -14,7 +14,7 @@ export default defineConfig({
     build: {
         lib: {
             entry: resolve(__dirname, 'src/main.ts'),
-            name: 'ReadItPlugin',
+            name: 'FoliatePlugin',
             fileName: () => 'main.js',
             formats: ['cjs'],
         },

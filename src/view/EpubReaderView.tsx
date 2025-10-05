@@ -2,7 +2,7 @@ import { ItemView, WorkspaceLeaf } from 'obsidian';
 import { createRoot, Root } from 'react-dom/client';
 import * as React from 'react';
 import EpubViewer from './EpubViewer';
-import type ReadItPlugin from '../main';
+import type FoliatePlugin from '../main';
 
 export const EPUB_VIEW_TYPE = 'epub-reader-view';
 
@@ -12,11 +12,11 @@ export class EpubReaderView extends ItemView {
     private fileName: string;
     public file: { path: string } | null = null;
     private isClosing: boolean = false;
-    private plugin: ReadItPlugin;
+    private plugin: FoliatePlugin;
 
     constructor(
         leaf: WorkspaceLeaf,
-        plugin: ReadItPlugin,
+        plugin: FoliatePlugin,
         filePath: string = '',
         fileName: string = ''
     ) {

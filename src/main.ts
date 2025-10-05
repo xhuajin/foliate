@@ -6,12 +6,12 @@ import {
 } from './view/ReadingHistoryView.tsx';
 import { EpubTocView, EPUB_TOC_VIEW_TYPE } from './view/EpubTocView.tsx';
 import './styles.css';
-import ReadItSettingTab, { DEFAULT_SETTINGS } from './settings.ts';
-import { EpubReadingProgress, ReadItSettings } from './types.ts';
+import FoliateSettingTab, { DEFAULT_SETTINGS } from './settings.ts';
+import { EpubReadingProgress, FoliateSettings } from './types.ts';
 import { mergeMetadata } from '@/lib/metadata';
 
-export default class ReadItPlugin extends Plugin {
-    settings!: ReadItSettings;
+export default class FoliatePlugin extends Plugin {
+    settings!: FoliateSettings;
 
     override async onload(): Promise<void> {
         await this.loadSettings();
@@ -50,7 +50,7 @@ export default class ReadItPlugin extends Plugin {
             this.app.workspace.on('file-menu', (menu, file) => {
                 if (file instanceof TFile && file.extension === 'epub') {
                     menu.addItem((item) => {
-                        item.setTitle('用 ReadIt 阅读器打开')
+                        item.setTitle('用 Foliate 阅读器打开')
                             .setIcon('book-open')
                             .onClick(async () => {
                                 await this.openEpubFile(file);
@@ -81,7 +81,7 @@ export default class ReadItPlugin extends Plugin {
         // 添加一个功能区图标
         const ribbonIconEl = this.addRibbonIcon(
             'library',
-            'ReadIt 阅读历史',
+            'Foliate 阅读历史',
             (_evt: MouseEvent) => {
                 // 当点击功能区图标时打开阅读历史页面
                 this.openReadingHistory();
@@ -93,10 +93,10 @@ export default class ReadItPlugin extends Plugin {
 
         // 这将在状态栏中添加一个状态栏项目，在桌面上不起作用
         // const statusBarItemEl = this.addStatusBarItem();
-        // statusBarItemEl.setText('ReadIt Plugin Ready');
+        // statusBarItemEl.setText('Foliate Plugin Ready');
 
         // 这将添加一个设置选项卡，以便用户可以配置插件的各个方面
-        this.addSettingTab(new ReadItSettingTab(this.app, this));
+        this.addSettingTab(new FoliateSettingTab(this.app, this));
 
         // 添加打开阅读历史的命令
         this.addCommand({
@@ -152,7 +152,7 @@ export default class ReadItPlugin extends Plugin {
     }
 
     // override onunload(): void {
-    //     console.log('ReadIt plugin unloaded');
+    //     console.log('Foliate plugin unloaded');
     // }
 
     async loadSettings(): Promise<void> {
@@ -237,7 +237,7 @@ export default class ReadItPlugin extends Plugin {
 
     showNotice(): void {
         new Notice(
-            'ReadIt Plugin activated! Built with Vite & Tailwind CSS 4',
+            'Foliate Plugin activated! Built with Vite & Tailwind CSS 4',
             3000
         );
     }
