@@ -79,14 +79,10 @@ export default class FoliatePlugin extends Plugin {
         );
 
         // 添加一个功能区图标
-        this.addRibbonIcon(
-            'library',
-            'Foliate',
-            (_evt: MouseEvent) => {
-                // 当点击功能区图标时打开阅读历史页面
-                this.openReadingHistory();
-            }
-        );
+        this.addRibbonIcon('library', 'Foliate', (_evt: MouseEvent) => {
+            // 当点击功能区图标时打开阅读历史页面
+            this.openReadingHistory();
+        });
 
         // 这将在状态栏中添加一个状态栏项目，在桌面上不起作用
         // const statusBarItemEl = this.addStatusBarItem();
@@ -236,13 +232,6 @@ export default class FoliatePlugin extends Plugin {
     async clearAllReadingProgress(): Promise<void> {
         this.settings.recentBooks = [];
         await this.saveSettings();
-    }
-
-    showNotice(): void {
-        new Notice(
-            'Foliate Plugin activated! Built with Vite & Tailwind CSS 4',
-            3000
-        );
     }
 
     async openEpubFile(file: TFile): Promise<void> {

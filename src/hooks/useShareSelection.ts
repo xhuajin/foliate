@@ -3,6 +3,7 @@ import type { App } from 'obsidian';
 import { Notice } from 'obsidian';
 import { SharePreviewModal } from '../components/SharePreviewModal';
 import { snapdom } from '@zumer/snapdom';
+import { t } from '@/lang/helpers';
 
 type UseShareSelectionParams = {
     app: App;
@@ -46,7 +47,7 @@ export function useShareSelection({
         const title =
             (book?.metadata?.title as string) ||
             fileName.replace(/\.epub$/i, '') ||
-            '未命名';
+            t('untitled');
         const author = (() => {
             const md = book?.metadata;
             if (!md) return '';
@@ -63,7 +64,7 @@ export function useShareSelection({
             if (md?.author?.name) return md.author.name;
             return '';
         })();
-        const pageLabel = `第${currentSectionIndex + 1}页`;
+        const pageLabel = t('pageLabel', currentSectionIndex + 1);
         const bg =
             getComputedStyle(document.body)
                 .getPropertyValue('--background-primary')
@@ -159,7 +160,7 @@ export function useShareSelection({
         }
         const fromEl = document.createElement('span');
         fromEl.className = 'foliate-share-card-footer-from';
-        fromEl.textContent = `来源：${title}`;
+        fromEl.textContent = t('sourceLabel', title);
         rightFoot.appendChild(fromEl);
         footer.appendChild(leftFoot);
         footer.appendChild(rightFoot);
@@ -177,7 +178,7 @@ export function useShareSelection({
 
             const trimmed = (text || '').trim();
             if (!trimmed) {
-                new Notice('没有可分享的文本');
+                new Notice(t('noTextToShare'));
                 return;
             }
 
@@ -212,7 +213,7 @@ export function useShareSelection({
 
             new SharePreviewModal(app, {
                 cardEl: card,
-                title: '分享预览',
+                title: t('sharePreview'),
                 styleKey: style,
                 onChangeStyle: (newStyle: string) => {
                     // 重建卡片并替换 wrapperEl 内的节点，保证截图目标存在
@@ -255,8 +256,8 @@ export function useShareSelection({
                 },
             }).open();
         } catch (err) {
-            console.error('分享图片生成失败:', err);
-            new Notice('分享失败，请重试');
+            console.error(t('shareImageGenFailed'), err);
+            new Notice(t('shareFailed'));
         } finally {
             // 清理推迟到 Modal close 的 cleanup 回调
             setIsSharing(false);
@@ -267,7 +268,7 @@ export function useShareSelection({
         if (isSharing) return;
         try {
             const containerEl = viewerRef.current;
-            if (!containerEl) throw new Error('阅读器尚未就绪');
+            if (!containerEl) throw new Error(t('readerNotReady'));
 
             const selection = window.getSelection();
             if (
@@ -275,7 +276,7 @@ export function useShareSelection({
                 selection.rangeCount === 0 ||
                 selection.isCollapsed
             ) {
-                new Notice('请先选中文本');
+                new Notice(t('pleaseSelectText'));
                 return;
             }
             const range = selection.getRangeAt(0);
@@ -293,20 +294,20 @@ export function useShareSelection({
                 !isInside(range.startContainer) ||
                 !isInside(range.endContainer)
             ) {
-                new Notice('请选择阅读区域中的文本');
+                new Notice(t('selectTextInReadingArea'));
                 return;
             }
 
             const text = selection.toString().trim();
             if (!text) {
-                new Notice('没有可分享的文本');
+                new Notice(t('noTextToShare'));
                 return;
             }
             // 复用 shareText 流程
             await shareText(text, style);
         } catch (err) {
-            console.error('分享图片生成失败:', err);
-            new Notice('分享失败，请重试');
+            console.error(t('shareImageGenFailed'), err);
+            new Notice(t('shareFailed'));
         } finally {
             // 状态由 shareText 管理，这里不处理
         }

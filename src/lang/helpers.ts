@@ -10,13 +10,22 @@ function loadLocale(lang: string): Partial<typeof en> {
     return en;
 }
 
-export function t(str: keyof typeof en): string {
+export function t(str: keyof typeof en, ...args: any[]): string {
     if (!locale) {
         // const LOCALE = localStorage.getItem('language')?.toLowerCase() || 'en';
         const LOCALE = getLanguage()?.toLowerCase() || 'en';
         locale = loadLocale(LOCALE);
     }
-    return (locale && locale[str]) || en[str];
+    let text = (locale && locale[str]) || en[str];
+
+    // Simple parameter substitution for {0}, {1}, etc.
+    if (args.length > 0) {
+        args.forEach((arg, index) => {
+            text = text.replace(new RegExp(`\\{${index}\\}`, 'g'), String(arg));
+        });
+    }
+
+    return text;
 }
 
 /*
