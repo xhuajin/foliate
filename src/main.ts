@@ -79,17 +79,14 @@ export default class FoliatePlugin extends Plugin {
         );
 
         // 添加一个功能区图标
-        const ribbonIconEl = this.addRibbonIcon(
+        this.addRibbonIcon(
             'library',
-            'Foliate 阅读历史',
+            'Foliate',
             (_evt: MouseEvent) => {
                 // 当点击功能区图标时打开阅读历史页面
                 this.openReadingHistory();
             }
         );
-
-        // 为功能区图标执行其他操作
-        ribbonIconEl.addClass('my-plugin-ribbon-class');
 
         // 这将在状态栏中添加一个状态栏项目，在桌面上不起作用
         // const statusBarItemEl = this.addStatusBarItem();

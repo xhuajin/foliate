@@ -464,7 +464,11 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
     const refreshSection = async () => {
         // 使用 obsidian 的 api，重新打开这个 epub
         if (filePath) {
-            const file = app.vault.getFileByPath(filePath) as TFile;
+            const file = app.vault.getFileByPath(filePath);
+            if (!file || !(file instanceof TFile)) {
+                new Notice(`${t('file')} ${t('notFound')}: ${filePath}`);
+                return;
+            }
             // 检查是否已经有这个特定文件的视图打开
             const existingLeaf = app.workspace
                 .getLeavesOfType(EPUB_VIEW_TYPE)
@@ -1015,25 +1019,41 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
 
             // 创建简单的阅读器容器
             const readerContainer = document.createElement('div');
-            readerContainer.className = 'epub-reader-content';
-            readerContainer.style.cssText = `
-                width: 100%;
-                height: 100%;
-                background: transparent;
-                color: var(--text-normal);
-                font-size: ${plugin.settings.fontSize}px;
-                max-width: ${plugin.settings.pageWidth}px;
-                margin: 0 auto;
-                position: relative;
-            `;
-            // 通过 CSS 变量管理行高，避免与书内样式、主题样式的优先级冲突
+            readerContainer.className =
+                'epub-reader-content epub-reader-dynamic';
+
+            // 使用 CSS 自定义属性设置样式
+            readerContainer.style.setProperty('--epub-width', '100%');
+            readerContainer.style.setProperty('--epub-height', '100%');
+            readerContainer.style.setProperty(
+                '--epub-background',
+                'transparent'
+            );
+            readerContainer.style.setProperty(
+                '--epub-color',
+                'var(--text-normal)'
+            );
+            readerContainer.style.setProperty(
+                '--epub-font-size',
+                `${plugin.settings.fontSize}px`
+            );
+            readerContainer.style.setProperty(
+                '--epub-max-width',
+                `${plugin.settings.pageWidth}px`
+            );
+            readerContainer.style.setProperty('--epub-margin', '0 auto');
+            readerContainer.style.setProperty('--epub-position', 'relative');
             readerContainer.style.setProperty(
                 '--epub-line-height',
                 String(plugin.settings.lineHeight)
             );
+
             // 字体控制：默认使用 Obsidian 字体变量；当 preferBookFont=true 时不强制指定容器字体，允许书籍 CSS 覆盖
             if (!plugin.settings.preferBookFont) {
-                readerContainer.style.fontFamily = 'var(--font-text)';
+                readerContainer.style.setProperty(
+                    '--epub-font-family',
+                    'var(--font-text)'
+                );
             }
 
             viewerRef.current.appendChild(readerContainer);

@@ -6,6 +6,33 @@
 @import './styles/epub-share.css';
 @import './styles/coverflow.css';
 
+/* Dynamic styles using CSS custom properties */
+.epub-reader-dynamic {
+    width: var(--epub-width, 100%);
+    height: var(--epub-height, 100%);
+    background: var(--epub-background, transparent);
+    color: var(--epub-color, var(--text-normal));
+    font-size: var(--epub-font-size, 16px);
+    max-width: var(--epub-max-width, none);
+    margin: var(--epub-margin, 0 auto);
+    position: var(--epub-position, relative);
+    font-family: var(--epub-font-family, inherit);
+}
+
+.foliate-share-card-dynamic {
+    width: var(--share-card-width, auto);
+    max-width: var(--share-card-max-width, none);
+}
+
+.foliate-share-card-body-dynamic {
+    font-size: var(--share-body-font-size, 16px);
+    line-height: var(--share-body-line-height, 1.6);
+}
+
+.epub-image-hidden {
+    display: none !important;
+}
+
 /* shadcn/Linear inspired design system */
 :root {
     --radius: 0.625rem;

@@ -230,6 +230,8 @@ const EpubToc: React.FC<EpubTocProps> = ({
         features: [syncDataLoaderFeature, hotkeysCoreFeature, expandAllFeature],
     });
 
+    let beforeCurrentItem = true;
+
     return (
         <div className="epub-toc-container">
             <div className="toc-toolbar">
@@ -285,10 +287,6 @@ const EpubToc: React.FC<EpubTocProps> = ({
                 </div>
             </div>
 
-            {/* <div className="toc-header">
-                {book?.metadata?.title && <h3>{book.metadata.title}</h3>}
-            </div> */}
-
             <div className="toc-content">
                 <Tree
                     className="relative before:absolute before:inset-0 before:-ms-1 "
@@ -299,6 +297,7 @@ const EpubToc: React.FC<EpubTocProps> = ({
                         const itemData = item.getItemData();
                         const isCurrentItem =
                             currentTocItem && currentTocItem.id === itemData.id;
+                        if (isCurrentItem) beforeCurrentItem = false;
 
                         return (
                             <TreeItem
@@ -317,7 +316,10 @@ const EpubToc: React.FC<EpubTocProps> = ({
                                         'py-[3px]',
                                         isCurrentItem
                                             ? 'bg-(--nav-item-background-active) text-(--nav-item-color-active)'
-                                            : ''
+                                            : '',
+                                        beforeCurrentItem
+                                            ? 'opacity-70'
+                                            : 'opacity-100'
                                     )}
                                     onClick={() => handleTocItemClick(itemData)}
                                 />

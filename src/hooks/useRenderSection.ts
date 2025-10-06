@@ -503,9 +503,9 @@ export function useRenderSection(
                                             '备用路径也失败:',
                                             fallbackErr
                                         );
-                                        (
-                                            img as HTMLImageElement
-                                        ).style.display = 'none';
+                                        (img as HTMLImageElement).classList.add(
+                                            'epub-image-hidden'
+                                        );
                                     }
                                 }
                             }

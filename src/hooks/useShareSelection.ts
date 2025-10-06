@@ -95,9 +95,16 @@ export function useShareSelection({
 
         // Body
         const body = document.createElement('div');
-        body.className = 'foliate-share-card-body';
-        body.style.fontSize = `${plugin?.settings?.fontSize ? Math.max(14, Math.min(20, Number(plugin.settings.fontSize))) : 16}px`;
-        body.style.lineHeight = `${plugin?.settings?.lineHeight || 1.6}`;
+        body.className =
+            'foliate-share-card-body foliate-share-card-body-dynamic';
+        body.style.setProperty(
+            '--share-body-font-size',
+            `${plugin?.settings?.fontSize ? Math.max(14, Math.min(20, Number(plugin.settings.fontSize))) : 16}px`
+        );
+        body.style.setProperty(
+            '--share-body-line-height',
+            `${plugin?.settings?.lineHeight || 1.6}`
+        );
         body.textContent = text;
 
         // Style variants

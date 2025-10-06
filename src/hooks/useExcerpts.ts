@@ -59,9 +59,7 @@ export function useExcerpts(
             case 'per-note': {
                 const folder = app.vault.getFolderByPath(dir);
                 const files = folder
-                    ? (folder.children.filter(
-                          (f) => f instanceof TFile
-                      ) as TFile[])
+                    ? folder.children.filter((f) => f instanceof TFile)
                     : [];
                 for (const f of files) {
                     const content = await app.vault.read(f);

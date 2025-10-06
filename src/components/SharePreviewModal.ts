@@ -54,14 +54,30 @@ export class SharePreviewModal extends Modal {
                 .setDynamicTooltip()
                 .onChange((value) => {
                     this.currentWidth = value;
-                    // 预览容器
+                    // preview card element
                     if (this.previewEl) {
-                        this.previewEl.style.width = `${value}px`;
-                        this.previewEl.style.maxWidth = `${value}px`;
+                        this.previewEl.classList.add(
+                            'foliate-share-card-dynamic'
+                        );
+                        this.previewEl.style.setProperty(
+                            '--share-card-width',
+                            `${value}px`
+                        );
+                        this.previewEl.style.setProperty(
+                            '--share-card-max-width',
+                            `${value}px`
+                        );
                     }
-                    // 真实截图节点
-                    this.cardEl.style.width = `${value}px`;
-                    this.cardEl.style.maxWidth = `${value}px`;
+                    // true card element
+                    this.cardEl.classList.add('foliate-share-card-dynamic');
+                    this.cardEl.style.setProperty(
+                        '--share-card-width',
+                        `${value}px`
+                    );
+                    this.cardEl.style.setProperty(
+                        '--share-card-max-width',
+                        `${value}px`
+                    );
                 });
         });
         new Setting(contentEl).setName('样式').addDropdown((dropdown) => {
@@ -80,8 +96,17 @@ export class SharePreviewModal extends Modal {
                         this.cardEl = newCard;
                         // 维持当前宽度到新的真实节点
                         if (this.currentWidth) {
-                            this.cardEl.style.width = `${this.currentWidth}px`;
-                            this.cardEl.style.maxWidth = `${this.currentWidth}px`;
+                            this.cardEl.classList.add(
+                                'foliate-share-card-dynamic'
+                            );
+                            this.cardEl.style.setProperty(
+                                '--share-card-width',
+                                `${this.currentWidth}px`
+                            );
+                            this.cardEl.style.setProperty(
+                                '--share-card-max-width',
+                                `${this.currentWidth}px`
+                            );
                         }
                         // 更新预览
                         body.empty();
@@ -97,8 +122,15 @@ export class SharePreviewModal extends Modal {
         this.previewEl = this.cardEl.cloneNode(true) as HTMLElement;
         body.appendChild(this.previewEl);
         // 初始化：让预览容器宽度与真实卡片对齐
-        this.previewEl.style.width = `${initialWidth}px`;
-        this.previewEl.style.maxWidth = `${initialWidth}px`;
+        this.previewEl.classList.add('foliate-share-card-dynamic');
+        this.previewEl.style.setProperty(
+            '--share-card-width',
+            `${initialWidth}px`
+        );
+        this.previewEl.style.setProperty(
+            '--share-card-max-width',
+            `${initialWidth}px`
+        );
 
         const footer = contentEl.createEl('div', {
             cls: 'foliate-share-footer',
