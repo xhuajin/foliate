@@ -1,29 +1,30 @@
 import * as React from 'react';
-import { ItemInstance } from '@headless-tree/core';
+import { TreeInstance, ItemInstance } from '@headless-tree/core';
 import { ChevronDownIcon } from 'lucide-react';
 import { Slot } from 'radix-ui';
 
 import { cn } from '../../lib/utils';
+import { TocItem } from '@/view/EpubTocView';
 
-interface TreeContextValue<T> {
+interface TreeContextValue {
     indent: number;
-    currentItem?: ItemInstance<T> | undefined;
-    tree?: any | undefined;
+    currentItem?: ItemInstance<TocItem> | undefined;
+    tree?: TreeInstance<TocItem> | undefined;
 }
 
-const TreeContext = React.createContext<TreeContextValue<any>>({
+const TreeContext = React.createContext<TreeContextValue>({
     indent: 20,
     currentItem: undefined,
     tree: undefined,
 });
 
-function useTreeContext<T = any>() {
-    return React.useContext(TreeContext) as TreeContextValue<T>;
+function useTreeContext() {
+    return React.useContext(TreeContext) as TreeContextValue;
 }
 
 interface TreeProps extends React.HTMLAttributes<HTMLDivElement> {
     indent?: number;
-    tree?: any;
+    tree?: TreeInstance<TocItem> | undefined;
 }
 
 function Tree({ indent = 20, tree, className, ...props }: TreeProps) {
@@ -54,21 +55,20 @@ function Tree({ indent = 20, tree, className, ...props }: TreeProps) {
     );
 }
 
-interface TreeItemProps<T = any>
-    extends React.HTMLAttributes<HTMLButtonElement> {
-    item: ItemInstance<T>;
+interface TreeItemProps extends React.HTMLAttributes<HTMLButtonElement> {
+    item: ItemInstance<TocItem>;
     indent?: number;
     asChild?: boolean;
 }
 
-function TreeItem<T = any>({
+function TreeItem({
     item,
     className,
     asChild,
     children,
     ...props
-}: Omit<TreeItemProps<T>, 'indent'>) {
-    const { indent } = useTreeContext<T>();
+}: Omit<TreeItemProps, 'indent'>) {
+    const { indent } = useTreeContext();
 
     const itemProps =
         typeof item.getProps === 'function' ? item.getProps() : {};
@@ -128,19 +128,18 @@ function TreeItem<T = any>({
     );
 }
 
-interface TreeItemLabelProps<T = any>
-    extends React.HTMLAttributes<HTMLSpanElement> {
-    item?: ItemInstance<T>;
+interface TreeItemLabelProps extends React.HTMLAttributes<HTMLSpanElement> {
+    item?: ItemInstance<TocItem>;
 }
 
-function TreeItemLabel<T = any>({
+function TreeItemLabel({
     item: propItem,
     children,
     className,
     onClick,
     ...props
-}: TreeItemLabelProps<T>) {
-    const { currentItem } = useTreeContext<T>();
+}: TreeItemLabelProps) {
+    const { currentItem } = useTreeContext();
     const item = propItem || currentItem;
 
     if (!item) {

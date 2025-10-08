@@ -10,7 +10,7 @@ function loadLocale(lang: string): Partial<typeof en> {
     return en;
 }
 
-export function t(str: keyof typeof en, ...args: any[]): string {
+export function t(str: keyof typeof en, ...args: (string | number)[]): string {
     if (!locale) {
         // const LOCALE = localStorage.getItem('language')?.toLowerCase() || 'en';
         const LOCALE = getLanguage()?.toLowerCase() || 'en';

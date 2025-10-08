@@ -43,6 +43,8 @@ import { ShareStyle, useShareSelection } from '../hooks/useShareSelection';
 import { cn } from '@/lib/utils';
 import { t } from '@/lang/helpers';
 import { normalizeAuthor } from '@/lib/metadata';
+import { EpubMetadata, EpubType } from '@/types';
+import { ZipEntry } from 'foliate-js/vendor/zip.js';
 
 interface EpubViewerProps {
     filePath: string;
@@ -59,8 +61,8 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
 }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [book, setBook] = useState<any>(null);
-    const entriesRef = useRef<any[] | null>(null);
+    const [book, setBook] = useState<EpubType | null>(null);
+    const entriesRef = useRef<ZipEntry[] | null>(null);
     const injectedFontRef = useRef<boolean>(false);
     const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
     const scrollToTopRef = useRef<HTMLDivElement>(null);
@@ -85,57 +87,58 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
     const saveProgress = async (sectionIndex: number) => {
         if (filePath && plugin.settings.autoSaveProgress) {
             // 提取书籍元数据
-            let metadata: any = undefined;
+            let metadata: EpubMetadata = {};
             if (book?.metadata) {
                 // 安全地提取作者信息
                 const author = normalizeAuthor(
-                    (book.metadata as any).author ??
-                        (book.metadata as any).creator
+                    book.metadata.author ?? book.metadata.creator
                 );
 
                 // 获取封面
                 let coverUrl = undefined;
-                if (book.getCover) {
-                    try {
-                        const coverBlob = await book.getCover();
-                        if (coverBlob) {
-                            // 将 Blob 转换为 base64 字符串
-                            const reader = new FileReader();
-                            coverUrl = await new Promise<string>(
-                                (resolve, reject) => {
-                                    reader.onload = () =>
-                                        resolve(reader.result as string);
-                                    reader.onerror = reject;
-                                    reader.readAsDataURL(coverBlob);
-                                }
-                            );
-                        }
-                    } catch (err) {
-                        console.warn('获取封面失败:', err);
+                try {
+                    const coverBlob = await book.loadBlob('cover');
+                    console.log('coverBlob', coverBlob);
+                    if (coverBlob) {
+                        // 将 Blob 转换为 base64 字符串
+                        const reader = new FileReader();
+                        coverUrl = await new Promise<string>(
+                            (resolve, reject) => {
+                                reader.onload = () =>
+                                    resolve(reader.result as string);
+                                reader.onerror = reject;
+                                reader.readAsDataURL(coverBlob);
+                            }
+                        );
                     }
+                } catch (err) {
+                    console.warn('获取封面失败:', err);
                 }
 
                 metadata = {};
-                const assign = (k: string, v: any) => {
+                const assign = (
+                    k: string,
+                    v: string | string[] | undefined
+                ) => {
                     if (
                         v !== undefined &&
                         v !== null &&
                         (!(typeof v === 'string') || v.trim() !== '') &&
                         (!Array.isArray(v) || v.length > 0)
                     )
-                        (metadata as any)[k] = v;
+                        Object.assign(metadata, { [k]: v });
                 };
                 assign(
                     'title',
                     book.metadata.title || fileName.replace('.epub', '')
                 );
                 assign('author', author);
-                assign('publisher', (book.metadata as any).publisher);
-                assign('language', (book.metadata as any).language);
-                assign('description', (book.metadata as any).description);
-                assign('subject', (book.metadata as any).subject);
-                assign('date', (book.metadata as any).date);
-                assign('identifier', (book.metadata as any).identifier);
+                assign('publisher', book.metadata.publisher);
+                assign('language', book.metadata.language);
+                assign('description', book.metadata.description);
+                assign('subject', book.metadata.subject);
+                assign('date', book.metadata.date);
+                assign('identifier', book.metadata.identifier);
                 assign('coverUrl', coverUrl);
             }
 
@@ -203,7 +206,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                     BlobReader,
                     TextWriter,
                     BlobWriter,
-                } = (await import('foliate-js/vendor/zip.js')) as any;
+                } = await import('foliate-js/vendor/zip.js');
                 configure({ useWebWorkers: false });
 
                 // 将 ArrayBuffer 转换为 Blob
@@ -214,21 +217,29 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                 const entries = await reader.getEntries();
                 entriesRef.current = entries;
                 const map = new Map(
-                    entries.map((entry: any) => [entry.filename, entry])
+                    entries.map((entry: ZipEntry) => [entry.filename, entry])
                 );
 
-                const load =
-                    (f: any) =>
-                    (name: string, ...args: any[]) =>
-                        map.has(name) ? f(map.get(name), ...args) : null;
-                const loadText = load((entry: any) =>
-                    entry.getData(new TextWriter())
-                );
-                const loadBlob = load((entry: any, type?: string) =>
-                    entry.getData(new BlobWriter(type))
-                );
+                const loadText = (name: string) => {
+                    const entry = map.get(name);
+                    if (entry) {
+                        return entry.getData(new TextWriter());
+                    } else {
+                        return null;
+                    }
+                };
+
+                const loadBlob = (name: string, type?: string) => {
+                    const entry = map.get(name);
+                    if (entry) {
+                        return entry.getData(new BlobWriter(type));
+                    } else {
+                        return null;
+                    }
+                };
+
                 const getSize = (name: string) =>
-                    (map.get(name) as any)?.uncompressedSize ?? 0;
+                    (map.get(name) as ZipEntry)?.uncompressedSize ?? 0;
 
                 // 创建 SHA-1 函数（用于解密字体）
                 const sha1 = async (data: ArrayBuffer) => {
@@ -245,7 +256,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
 
                 // 使用正确的 API 创建 EPUB 实例
                 const epubInstance = new EPUB(loader);
-                const epub = await (epubInstance as any).init();
+                const epub = (await epubInstance.init()) as EpubType;
                 setBook(epub);
 
                 // 在EPUB加载完成后立即加载保存的进度
@@ -517,17 +528,8 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
     const searchText = () => {
         const selectedText = getCurrentSelectedText();
         if (selectedText) {
-            // 在Obsidian中搜索选中的文本 - 使用简单的方法
-            const searchLeaf = app.workspace.getLeavesOfType('search')[0];
-            if (searchLeaf) {
-                (searchLeaf.view as any).searchComponent?.setValue(
-                    selectedText
-                );
-                app.workspace.revealLeaf(searchLeaf);
-            } else {
-                // 如果搜索面板未打开，尝试执行搜索命令
-                (app as any).commands.executeCommandById('global-search:open');
-            }
+            // 调用 obsidian commands 搜索
+            app.commands.executeCommandById('global-search:open');
         }
     };
 
@@ -616,9 +618,8 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
         ) as HTMLElement | null;
         if (container) {
             const escaped =
-                (window as any).CSS &&
-                typeof (window as any).CSS.escape === 'function'
-                    ? (window as any).CSS.escape(path || '')
+                window.CSS && typeof window.CSS.escape === 'function'
+                    ? window.CSS.escape(path || '')
                     : (path || '').replace(/"/g, '\\"');
             const selector = path
                 ? `.epub-highlight[data-source-file="${escaped}"]`
@@ -700,7 +701,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
             root as Node,
             NodeFilter.SHOW_TEXT,
             {
-                acceptNode: (node: any) => {
+                acceptNode: (node: Node) => {
                     if (!node?.nodeValue || !node.nodeValue.trim())
                         return NodeFilter.FILTER_REJECT;
                     // 限定必须在阅读容器内
@@ -708,7 +709,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                         return NodeFilter.FILTER_REJECT;
                     // 仅处理与选区相交的文本节点
                     try {
-                        return (range as any).intersectsNode(node)
+                        return range.intersectsNode(node)
                             ? NodeFilter.FILTER_ACCEPT
                             : NodeFilter.FILTER_REJECT;
                     } catch {
@@ -730,7 +731,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                             : NodeFilter.FILTER_REJECT;
                     }
                 },
-            } as any
+            }
         );
 
         type Piece = { node: Text; start: number; end: number };
@@ -976,9 +977,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
             navigator.clipboard.writeText(quote);
 
             // 显示通知
-            if ((app as any).notice) {
-                new (app as any).Notice(t('excerptCopiedToClipboard'));
-            }
+            new Notice(t('excerptCopiedToClipboard'));
         }
     };
 
@@ -997,7 +996,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
 
         try {
             // 清空容器
-            viewerRef.current.innerHTML = '';
+            viewerRef.current.empty();
 
             // 防御性清理：确保之前潜在残留的字体/章节样式被移除
             try {
@@ -1013,7 +1012,11 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
 
             // 检查是否有内容
             if (!book.sections || book.sections.length === 0) {
-                viewerRef.current.innerHTML = `<div class="p-4 text-center text-red-500">${t('noEpubContent')}</div>`;
+                viewerRef.current.empty();
+                const errEl = document.body.createDiv({
+                    text: t('noEpubContent'),
+                });
+                viewerRef.current.appendChild(errEl);
                 return;
             }
 
@@ -1073,7 +1076,11 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
         } catch (err) {
             console.error('Error initializing reader:', err);
             if (viewerRef.current) {
-                viewerRef.current.innerHTML = `<div class=\"p-4 text-center text-red-500\">${t('initFailed')}</div>`;
+                viewerRef.current.empty();
+                const errEl = document.body.createDiv({
+                    text: t('initFailed'),
+                });
+                viewerRef.current.appendChild(errEl);
             }
             setError(
                 'Failed to initialize EPUB reader: ' +
@@ -1087,7 +1094,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
         if (!book || !entriesRef.current || !entriesRef.current.length) return;
         const fontExt = /\.(ttf|otf|woff2?|woff)$/i;
         const fontEntries = entriesRef.current
-            .map((e: any) => e.filename)
+            .map((e: ZipEntry) => e.filename)
             .filter(
                 (name: string) =>
                     /(^|\/)OEBPS\/(Fonts|fonts)\//.test(name) &&
@@ -1098,7 +1105,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
         const faces: string[] = [];
         for (const path of fontEntries) {
             try {
-                const blob = await (book as any).loadBlob?.(path);
+                const blob = await book.loadBlob?.(path);
                 if (!blob) continue;
                 const url = URL.createObjectURL(blob);
                 const familyBase = path.split('/').pop()!.replace(fontExt, '');

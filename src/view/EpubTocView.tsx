@@ -13,16 +13,11 @@ import {
 import { cn } from '../lib/utils';
 import { t } from '@/lang/helpers';
 import { ChevronsDownUp, ChevronsUpDown, Focus } from 'lucide-react';
+import { EpubSection, EpubTocItem, EpubType } from '@/types';
 
 export const EPUB_TOC_VIEW_TYPE = 'epub-toc-view';
 
-interface BookItem {
-    href: string | undefined;
-    label: string | undefined;
-    subitems: BookItem[] | undefined;
-}
-
-interface TocItem {
+export interface TocItem {
     id: string;
     href: string;
     label: string;
@@ -35,7 +30,7 @@ interface TocItem {
 
 // TOC 组件属性
 interface EpubTocProps {
-    book: any;
+    book: EpubType;
     tocItems: Record<string, TocItem>;
     currentSectionIndex: number;
     onSectionSelect: (sectionIndex: number) => void;
@@ -44,7 +39,7 @@ interface EpubTocProps {
 
 // TOC 组件属性
 interface EpubTocProps {
-    book: any;
+    book: EpubType;
     currentSectionIndex: number;
     onSectionSelect: (sectionIndex: number) => void;
     plugin: FoliatePlugin;
@@ -87,13 +82,10 @@ const EpubToc: React.FC<EpubTocProps> = ({
         const currentSection = book.sections[currentSectionIndex];
         if (!currentSection) return null;
 
-        // 通过href匹配找到对应的TOC项
+        // 通过 id 匹配找到对应的TOC项
         return (
-            Object.values(tocItems).find(
-                (tocItem) =>
-                    hrefMatches(tocItem.href, currentSection.href) ||
-                    hrefMatches(tocItem.href, currentSection.id) ||
-                    hrefMatches(tocItem.href, currentSection.src)
+            Object.values(tocItems).find((tocItem: TocItem) =>
+                hrefMatches(tocItem.id, currentSection.id)
             ) || null
         );
     }, [book, tocItems, currentSectionIndex]);
@@ -188,14 +180,11 @@ const EpubToc: React.FC<EpubTocProps> = ({
     const handleTocItemClick = (tocItem: TocItem) => {
         if (tocItem.href && book?.sections) {
             // 去除锚点/查询字符串后进行匹配
-            const targetHref = normalizeHref(tocItem.href);
+            const targetId = normalizeHref(tocItem.id);
 
             // 尝试找到对应的章节索引（考虑 href/id/src 与 endsWith 退化匹配）
             const sectionIndex = book.sections.findIndex(
-                (section: any) =>
-                    hrefMatches(section.href, targetHref) ||
-                    hrefMatches(section.id, targetHref) ||
-                    hrefMatches(section.src, targetHref)
+                (section: EpubSection) => hrefMatches(section.id, targetId)
             );
 
             if (sectionIndex >= 0) {
@@ -344,7 +333,7 @@ const EpubToc: React.FC<EpubTocProps> = ({
 export class EpubTocView extends ItemView {
     private root: Root | null = null;
     private plugin: FoliatePlugin;
-    private book: any = null;
+    private book: EpubType | null = null;
     private currentSectionIndex: number = 0;
     private onSectionSelect: ((sectionIndex: number) => void) | null = null;
 
@@ -367,7 +356,7 @@ export class EpubTocView extends ItemView {
 
     // 设置书籍数据和回调
     setBookData(
-        book: any,
+        book: EpubType,
         currentSectionIndex: number,
         onSectionSelect: (sectionIndex: number) => void
     ): void {
@@ -398,7 +387,7 @@ export class EpubTocView extends ItemView {
             const rootChildren: string[] = [];
 
             const processTocItem = (
-                item: BookItem,
+                item: EpubTocItem,
                 level = 0,
                 parentId?: string
             ): string => {
@@ -411,7 +400,7 @@ export class EpubTocView extends ItemView {
                 // 先处理子项，获取子项ID列表
                 const childIds: string[] = [];
                 if (item.subitems && item.subitems.length > 0) {
-                    item.subitems.forEach((subitem) => {
+                    item.subitems.forEach((subitem: EpubTocItem) => {
                         const childId = processTocItem(subitem, level + 1, id);
                         childIds.push(childId);
                     });
@@ -434,7 +423,7 @@ export class EpubTocView extends ItemView {
             };
 
             // 处理顶级项目
-            this.book.toc.forEach((item: BookItem) => {
+            this.book.toc.forEach((item: EpubTocItem) => {
                 const itemId = processTocItem(item, 0, 'root'); // 顶级项的父级是root
                 rootChildren.push(itemId);
             });
@@ -455,14 +444,14 @@ export class EpubTocView extends ItemView {
             };
         }
 
-        if (!tocItems) {
+        if (!tocItems || !this.book) {
             return;
         }
 
         const key =
             this.book?.metadata?.identifier ||
             this.book?.metadata?.title ||
-            this.book?.sections?.[0]?.href ||
+            this.book?.sections?.[0]?.id ||
             'toc';
 
         this.root.render(

@@ -1,8 +1,9 @@
-import { ItemView, WorkspaceLeaf } from 'obsidian';
+import { ItemView, ViewStateResult, WorkspaceLeaf } from 'obsidian';
 import { createRoot, Root } from 'react-dom/client';
 import * as React from 'react';
 import EpubViewer from './EpubViewer';
 import type FoliatePlugin from '../main';
+import { t } from '@/lang/helpers';
 
 export const EPUB_VIEW_TYPE = 'epub-reader-view';
 
@@ -30,7 +31,7 @@ export class EpubReaderView extends ItemView {
             typeof viewState.state === 'object' &&
             'file' in viewState.state
         ) {
-            const fileFromState = (viewState.state as any).file;
+            const fileFromState = viewState.state.file;
             if (
                 typeof fileFromState === 'string' &&
                 fileFromState.trim() !== ''
@@ -107,7 +108,10 @@ export class EpubReaderView extends ItemView {
     }
 
     // 处理视图状态变化
-    override async setState(state: any, result: any): Promise<void> {
+    override async setState(
+        state: { file?: string },
+        result: ViewStateResult
+    ): Promise<void> {
         // 如果传入的state包含空文件路径，但我们已经有文件信息，就不要覆盖
         if (state && typeof state.file === 'string') {
             if (state.file && state.file.trim() !== '') {
@@ -123,14 +127,14 @@ export class EpubReaderView extends ItemView {
                 // 不做任何操作，保持现有的文件信息
                 return super.setState(state, result);
             } else {
-                console.log('从 setState 获取到文件路径:', state.file);
+                console.log(t('gotFilePathFromSetState', state.file));
             }
         }
 
         return super.setState(state, result);
     }
 
-    override getState(): any {
+    override getState() {
         const state = super.getState();
         return {
             ...state,
@@ -156,7 +160,7 @@ export class EpubReaderView extends ItemView {
                     this.fileName = epubFiles[0].name;
                     this.file = { path: epubFiles[0].path };
                 } else {
-                    console.log('没有找到任何EPUB文件');
+                    console.log(t('noEpubFilesFound'));
                 }
             }
         }
@@ -168,7 +172,7 @@ export class EpubReaderView extends ItemView {
 
         const container = this.containerEl.children[1];
         if (!container) {
-            console.error('容器元素未找到');
+            console.error(t('containerElementNotFound'));
             return;
         }
 

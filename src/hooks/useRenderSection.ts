@@ -1,7 +1,9 @@
+import { t } from '@/lang/helpers';
+import { EpubType } from '@/types';
 import React from 'react';
 
 export function useRenderSection(
-    book: any | null,
+    book: EpubType | null,
     viewerRef: React.RefObject<HTMLDivElement>,
     applyHighlightsForSection: (sectionIndex: number) => Promise<void>,
     preferBookFont: boolean
@@ -27,18 +29,23 @@ export function useRenderSection(
                     oldStyles.forEach((el) => el.remove());
                 } catch {}
 
-                readerContainer.innerHTML =
-                    '<div class="p-4 text-center">加载中...</div>';
+                const loadingEl = document.body.createDiv({
+                    text: t('loading'),
+                    cls: 'text-center p-4',
+                });
+                readerContainer.empty();
+                readerContainer.appendChild(loadingEl);
 
                 if (section.createDocument) {
-                    const doc = await section.createDocument();
-                    if (doc && doc.body) {
+                    const sectionDoc =
+                        (await section.createDocument()) as Document;
+                    if (sectionDoc && sectionDoc.body) {
                         // 收集并加载章节样式（内联 <style> 与外链 <link rel="stylesheet">）
                         const collectedCss: string[] = [];
                         try {
                             // 1) 内联样式
                             const inlineStyles = Array.from(
-                                doc.querySelectorAll('style')
+                                sectionDoc.querySelectorAll('style')
                             ) as HTMLStyleElement[];
                             for (const s of inlineStyles) {
                                 const txt = s.textContent || '';
@@ -47,7 +54,7 @@ export function useRenderSection(
 
                             // 2) 外链样式
                             const links = Array.from(
-                                doc.querySelectorAll(
+                                sectionDoc.querySelectorAll(
                                     'link[rel="stylesheet"][href]'
                                 )
                             ) as HTMLLinkElement[];
@@ -82,10 +89,26 @@ export function useRenderSection(
                         }
 
                         // 渲染 HTML
-                        readerContainer.innerHTML =
-                            doc.body.innerHTML ||
-                            doc.body.textContent ||
-                            '无法加载内容';
+                        readerContainer.empty();
+                        if (sectionDoc.body.innerHTML) {
+                            const docCollection = Array.from(
+                                sectionDoc.body.children
+                            );
+
+                            if (docCollection.length) {
+                                docCollection.forEach((child) => {
+                                    readerContainer.appendChild(child);
+                                });
+                            }
+                        } else if (sectionDoc.body.textContent) {
+                            readerContainer.append(sectionDoc.body.textContent);
+                        } else {
+                            readerContainer.append(
+                                document.body.createSpan({
+                                    text: t('failedToLoadEpub'),
+                                })
+                            );
+                        }
 
                         // 将样式注入容器（基础作用域处理：为选择器添加 .epub-reader-content 前缀，降低污染）
                         if (collectedCss.length) {
@@ -165,15 +188,15 @@ export function useRenderSection(
                                                 block = '';
                                                 break;
                                             }
-                                            // 解析相对路径，基于 section.href
+                                            // 解析相对路径，基于 section.id
                                             try {
-                                                const sectionHref =
-                                                    section.href || '';
+                                                const sectionId =
+                                                    section.id || '';
                                                 const sectionDir =
-                                                    sectionHref.includes('/')
-                                                        ? sectionHref.substring(
+                                                    sectionId.includes('/')
+                                                        ? sectionId.substring(
                                                               0,
-                                                              sectionHref.lastIndexOf(
+                                                              sectionId.lastIndexOf(
                                                                   '/'
                                                               )
                                                           )
@@ -390,13 +413,13 @@ export function useRenderSection(
                                         src.startsWith('./') ||
                                         !src.startsWith('/')
                                     ) {
-                                        const sectionHref = section.href || '';
-                                        const sectionDir = sectionHref.includes(
+                                        const sectionId = section.id || '';
+                                        const sectionDir = sectionId.includes(
                                             '/'
                                         )
-                                            ? sectionHref.substring(
+                                            ? sectionId.substring(
                                                   0,
-                                                  sectionHref.lastIndexOf('/')
+                                                  sectionId.lastIndexOf('/')
                                               )
                                             : '';
                                         if (src.startsWith('../')) {
@@ -518,8 +541,11 @@ export function useRenderSection(
                             console.warn('章节高亮时出错：', e);
                         }
                     } else {
-                        readerContainer.innerHTML =
-                            '<div class="p-4 text-center text-yellow-600">无法解析章节内容</div>';
+                        const errEl = document.body.createDiv({
+                            text: t('failedToLoadEpub'),
+                        });
+                        readerContainer.empty();
+                        readerContainer.appendChild(errEl);
                     }
                 }
             } catch (err) {
@@ -528,7 +554,11 @@ export function useRenderSection(
                     '.epub-reader-content'
                 ) as HTMLElement | null;
                 if (readerContainer) {
-                    readerContainer.innerHTML = `<div class="p-4 text-center text-red-500">加载失败</div>`;
+                    readerContainer.empty();
+                    const errEl = document.body.createDiv({
+                        text: t('failedToLoadEpub'),
+                    });
+                    readerContainer.appendChild(errEl);
                 }
             }
         },

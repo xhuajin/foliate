@@ -1,11 +1,13 @@
 import React from 'react';
 import { App } from 'obsidian';
-import { EpubReaderView } from '@/view/EpubReaderView';
+// import { EpubReaderView } from '@/view/EpubReaderView';
 import { t } from '@/lang/helpers';
+import { EpubType } from '@/types';
+import { EpubTocView } from '@/view/EpubTocView';
 
 export function useSectionNav(
     app: App,
-    book: any | null,
+    book: EpubType | null,
     scrollToTopRef: React.RefObject<HTMLDivElement>,
     viewerRef: React.RefObject<HTMLDivElement>,
     renderSection: (index: number) => Promise<void>,
@@ -25,11 +27,6 @@ export function useSectionNav(
             await saveProgress(sectionIndex);
             await renderSection(sectionIndex).then(() => {
                 // 考虑到有点击目录跳转的情况，不应该使用 activeView。
-                // const epubContent = app.workspace
-                //     .getActiveViewOfType(EpubReaderView)
-                //     ?.containerEl.querySelector(
-                //         '.epub-content'
-                //     ) as HTMLElement | null;
                 if (scrollToTopRef.current) {
                     scrollToTopRef.current.scrollTo({ top: 0 });
                 } else {
@@ -39,7 +36,7 @@ export function useSectionNav(
 
             const tocViews = app.workspace.getLeavesOfType('epub-toc-view');
             if (tocViews.length > 0 && tocViews[0]) {
-                const tocView = tocViews[0].view as any;
+                const tocView = tocViews[0].view as EpubTocView;
                 if (tocView && tocView.updateCurrentSection)
                     tocView.updateCurrentSection(sectionIndex);
             }

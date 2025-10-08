@@ -19,6 +19,65 @@ export interface EpubMetadata {
     coverUrl?: string; // 新增封面 URL 字段
 }
 
+export interface EpubTocItem {
+    href: string | undefined;
+    label: string | undefined;
+    subitems: EpubTocItem[] | undefined;
+}
+
+export type EpubSection = {
+    cfi: string;
+    createDocument: () => Document | null;
+    id: string;
+    linear: 'yes' | 'no' | null;
+    load: () => Promise<Document | null>;
+    mediaOverlay: string | null;
+    pageSpread: string | undefined;
+    resolveHref: (href: string) => string;
+    size: number;
+    unload: () => void;
+};
+
+export interface EpubResource {
+    cfis: string[];
+    cover: string;
+    guide: Array<{ href: string; type: string[]; label: string }>;
+    manifest: Array<{
+        href: string;
+        id: string;
+        mediaOverlay: string | null;
+        mediaType: string;
+        properties?: string[];
+    }>;
+    properties: {} | undefined;
+    navPath: string | undefined;
+    ncxPath: string | undefined;
+    opf: Document;
+    pageProgressionDirection: null | 'ltr' | 'rtl' | 'auto';
+    spine: Array<{
+        id: string | null;
+        idref: string;
+        linear: string | null;
+        properties: string[];
+    }>;
+}
+
+export interface EpubType {
+    dir: string | null;
+    getSize: () => number;
+    landmarks: Array<{ href: string; type: string[]; label: string }>;
+    loadBlob: (path?: string) => Promise<Blob>;
+    loadText: () => Promise<Blob>;
+    media: {};
+    metadata: EpubMetadata;
+    pageList: Array<{ href: string; type: string[]; title: string }> | null;
+    parser: DOMParser | {};
+    rendition: {};
+    resources: EpubResource[];
+    sections: EpubSection[];
+    toc: EpubTocItem[];
+}
+
 export interface EpubReadingProgress {
     filePath: string;
     fileName: string;

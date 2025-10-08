@@ -1,6 +1,7 @@
 import { App, TFile } from 'obsidian';
 import React from 'react';
 import type FoliatePlugin from '../main';
+import { EpubType } from '@/types';
 // import { getAllDailyNotes } from 'obsidian-daily-notes-interface';
 
 type Excerpt = {
@@ -14,7 +15,7 @@ export function useExcerpts(
     plugin: FoliatePlugin,
     filePath: string,
     fileName: string,
-    book: any,
+    book: EpubType | null,
     viewerRef: React.RefObject<HTMLDivElement>
 ) {
     const getBaseName = (name: string) =>
@@ -57,7 +58,7 @@ export function useExcerpts(
             case 'per-book':
             case 'single-note':
             case 'per-note': {
-                const folder = app.vault.getFolderByPath(dir);
+                const folder = app.vault.getFolderByPath(dir + '/' + title);
                 const files = folder
                     ? folder.children.filter((f) => f instanceof TFile)
                     : [];
@@ -181,13 +182,13 @@ export function useExcerpts(
             container,
             NodeFilter.SHOW_TEXT,
             {
-                acceptNode: (node: any) => {
+                acceptNode: (node: Text) => {
                     if (!node.nodeValue) return NodeFilter.FILTER_REJECT;
                     const trimmed = node.nodeValue.trim();
                     if (!trimmed) return NodeFilter.FILTER_REJECT;
                     return NodeFilter.FILTER_ACCEPT;
                 },
-            } as any
+            }
         );
 
         const ranges: Array<{ node: Text; start: number; length: number }> = [];

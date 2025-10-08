@@ -38,6 +38,17 @@ export default {
     pageLabel: 'Page {0}',
     sourceLabel: 'Source: {0}',
     searchInVault: 'Search in vault',
+
+    // Main.ts
+    openWithFoliate: 'Open with Foliate',
+    openReadingHistory: 'Open Reading History',
+    viewCreationFailed: 'View creation failed',
+    cannotCreateSidebarLeaf: 'Cannot create sidebar leaf',
+
+    // EpubReaderView.tsx
+    gotFilePathFromSetState: 'Got file path from setState: {0}',
+    noEpubFilesFound: 'No EPUB files found',
+    containerElementNotFound: 'Container element not found',
     deleteExcerpt: 'Delete excerpt',
 
     // Share styles

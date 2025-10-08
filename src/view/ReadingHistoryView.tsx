@@ -13,6 +13,7 @@ import {
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { BringToFront, LayoutPanelLeft } from 'lucide-react';
 import { t } from '@/lang/helpers';
+import { EpubReadingProgress } from '@/types';
 
 export const READING_HISTORY_VIEW_TYPE = 'reading-history-view';
 
@@ -50,13 +51,13 @@ const ReadingHistory: React.FC<ReadingHistoryProps> = ({
         }
     };
 
-    const getProgressPercentage = (book: any) => {
+    const getProgressPercentage = (book: EpubReadingProgress) => {
         if (!book.totalSections || book.totalSections === 0) return 0;
         return Math.round(((book.sectionIndex + 1) / book.totalSections) * 100);
     };
 
     const getBookStatus = (
-        book: any
+        book: EpubReadingProgress
     ): 'reading' | 'completed' | 'not-started' => {
         const progress = getProgressPercentage(book);
         if (progress === 100) return 'completed';
@@ -85,11 +86,9 @@ const ReadingHistory: React.FC<ReadingHistoryProps> = ({
                       language: book.metadata.language,
                   }),
                   // 统一 publisher 优先级：publisher > published
-                  ...(((book.metadata as any).publisher ||
-                      (book.metadata as any).published) && {
+                  ...((book.metadata.publisher || book.metadata.published) && {
                       publisher:
-                          (book.metadata as any).publisher ||
-                          (book.metadata as any).published,
+                          book.metadata.publisher || book.metadata.published,
                   }),
                   ...(book.metadata.subject && {
                       subject: book.metadata.subject,

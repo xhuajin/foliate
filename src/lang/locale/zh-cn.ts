@@ -38,6 +38,17 @@ export default {
     pageLabel: '第{0}页',
     sourceLabel: '来源：{0}',
     searchInVault: '在库中搜索',
+
+    // Main.ts
+    openWithFoliate: '用 Foliate 打开',
+    openReadingHistory: '打开阅读历史',
+    viewCreationFailed: '视图创建失败',
+    cannotCreateSidebarLeaf: '无法创建左侧边栏叶子节点',
+
+    // EpubReaderView.tsx
+    gotFilePathFromSetState: '从 setState 获取到文件路径: {0}',
+    noEpubFilesFound: '没有找到任何EPUB文件',
+    containerElementNotFound: '容器元素未找到',
     deleteExcerpt: '删除摘录',
 
     // 分享样式

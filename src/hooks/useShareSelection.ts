@@ -4,12 +4,14 @@ import { Notice } from 'obsidian';
 import { SharePreviewModal } from '../components/SharePreviewModal';
 import { snapdom } from '@zumer/snapdom';
 import { t } from '@/lang/helpers';
+import { EpubType } from '@/types';
+import FoliatePlugin from '@/main';
 
 type UseShareSelectionParams = {
     app: App;
-    plugin: any;
+    plugin: FoliatePlugin;
     viewerRef: React.RefObject<HTMLDivElement>;
-    book: any;
+    book: EpubType | null;
     fileName: string;
     currentSectionIndex: number;
 };
@@ -28,8 +30,9 @@ export function useShareSelection({
 
     async function getCoverDataUrl(): Promise<string | undefined> {
         try {
-            if (!book?.getCover) return undefined;
-            const coverBlob: Blob | undefined = await book.getCover();
+            if (!book?.loadBlob) return undefined;
+            const coverBlob: Blob | undefined = await book.loadBlob('cover');
+            console.log('coverBlob', coverBlob);
             if (!coverBlob) return undefined;
             const reader = new FileReader();
             const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -52,14 +55,14 @@ export function useShareSelection({
             const md = book?.metadata;
             if (!md) return '';
             if (typeof md.creator === 'string') return md.creator;
-            if (md?.creator?.name) return md.creator.name;
-            if (Array.isArray(md?.creator))
-                return md.creator
-                    .map((c: any) =>
-                        typeof c === 'string' ? c : c?.name || ''
-                    )
-                    .filter(Boolean)
-                    .join(', ');
+            if (md?.creator) return md.creator;
+            // if (Array.isArray(md?.creator))
+            //     return md.creator
+            //         .map((c) =>
+            //             typeof c === 'string' ? c : c?.name || ''
+            //         )
+            //         .filter(Boolean)
+            //         .join(', ');
             if (typeof md.author === 'string') return md.author;
             if (md?.author?.name) return md.author.name;
             return '';
@@ -219,14 +222,14 @@ export function useShareSelection({
                     // 重建卡片并替换 wrapperEl 内的节点，保证截图目标存在
                     const next = buildCard(
                         trimmed,
-                        newStyle as any,
+                        newStyle as ShareStyle,
                         coverUrl || undefined
                     );
                     const newCard = next.card;
                     if (card.parentElement)
                         card.parentElement.replaceChild(newCard, card);
                     card = newCard;
-                    meta = next.meta as any;
+                    meta = next.meta;
                     return newCard;
                 },
                 onDownload: async () => {
@@ -236,15 +239,11 @@ export function useShareSelection({
                 onCopy: async () => {
                     const result = await makeCapture();
                     const blob = await result.toBlob({ type: 'png' });
-                    if (
-                        blob &&
-                        (navigator as any).clipboard &&
-                        (window as any).ClipboardItem
-                    ) {
-                        const item = new (window as any).ClipboardItem({
+                    if (blob && navigator.clipboard && window.ClipboardItem) {
+                        const item = new window.ClipboardItem({
                             'image/png': blob,
                         });
-                        await (navigator as any).clipboard.write([item]);
+                        await navigator.clipboard.write([item]);
                     } else {
                         throw new Error('Clipboard API not available');
                     }

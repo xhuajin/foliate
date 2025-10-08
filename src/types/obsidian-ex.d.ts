@@ -8,6 +8,27 @@ declare module 'obsidian' {
     interface App {
         appId?: string;
 
+        commands: {
+            app: App;
+            commands: {
+                string: {
+                    id: string;
+                    name: string;
+                    icon: string;
+                    checkCallback: Function;
+                };
+            }[];
+            editorCommands: {
+                string: {
+                    id: string;
+                    name: string;
+                    icon: string;
+                    checkCallback: Function;
+                };
+            }[];
+            executeCommandById: Function;
+        };
+
         plugins: {
             enabledPlugins: Set<string>;
             plugins: {

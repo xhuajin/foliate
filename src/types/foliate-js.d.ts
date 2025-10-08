@@ -38,9 +38,50 @@ declare module 'foliate-js/vendor/zip.js' {
     export class BlobReader {
         constructor(blob: Blob);
     }
+    export interface ZipEntry {
+        bitFlag: {
+            level: number;
+            dataDescriptor: boolean;
+            languageEncodingFlag: boolean;
+        };
+        comment: string;
+        commentUTF8: boolean;
+        compressedSize: number;
+        compressionMethod: number;
+        creationDate: Date | string | undefined;
+        directory: boolean;
+        diskNumberStart: number;
+        encrypted: boolean;
+        externalFileAttribute: number;
+        entraField: Map<string, string | number>;
+        extraFieldAES: string | undefined;
+        extraFieldExtendedTimestamp: string | undefined;
+        extraFieldNTFS: string | undefined;
+        extraFieldUnicodeComment: string | undefined;
+        extraFieldUnicodePath: string | undefined;
+        extraFieldZip64: string | undefined;
+        filename: string;
+        filenameUTF8: boolean;
+        getData: Function;
+        internalFileAttribute: number;
+        lastAccessDate: Date | string | undefined;
+        lastModDate: Date | string | undefined;
+        msDosCompatible: boolean;
+        offset: number;
+        rawComment: Uint8Array;
+        rawExtraField: Uint8Array;
+        rawFilename: Uint8Array;
+        rawLastModDate: number;
+        signature: number;
+        uncompressedSize: number;
+        version: number;
+        versionMadeBy: number;
+        zip64: string | undefined;
+        zipCrypto: boolean;
+    }
     export class ZipReader {
         constructor(reader: BlobReader);
-        getEntries(): Promise<any[]>;
+        getEntries(): Promise<ZipEntry[]>;
     }
     export class TextWriter {}
     export class BlobWriter {
