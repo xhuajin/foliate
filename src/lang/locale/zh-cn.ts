@@ -138,4 +138,15 @@ export default {
     settings_clearAllProgress_button: '全部清空',
     settings_clearAllProgress_confirm: '此操作将删除所有阅读记录，是否继续？',
     settings_clearAllProgress_done: '已清空所有阅读记录',
+
+    // SharePreviewModal
+    modalWidth: '宽度',
+    modalStyle: '样式',
+    downloadImage: '下载图片',
+    copyToClipboard: '复制到剪贴板',
+    processing: '处理中…',
+    imageDownloaded: '已下载图片',
+    downloadFailed: '下载失败',
+    imageCopiedToClipboard: '已复制图片到剪贴板',
+    copyFailed: '复制失败',
 };

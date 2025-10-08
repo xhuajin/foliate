@@ -1,4 +1,5 @@
 import { App, Modal, Notice, Setting } from 'obsidian';
+import { t } from '../lang/helpers';
 
 type Actions = {
     onDownload: () => Promise<void>;
@@ -31,7 +32,7 @@ export class SharePreviewModal extends Modal {
         super(app);
         this.cardEl = opts.cardEl;
         this.actions = { onDownload: opts.onDownload, onCopy: opts.onCopy };
-        this.titleText = opts.title || '分享预览';
+        this.titleText = opts.title || t('sharePreview');
         this.cleanup = opts.cleanup;
         this.styleKey = opts.styleKey || 'classic';
         this.onChangeStyle = opts.onChangeStyle;
@@ -47,7 +48,7 @@ export class SharePreviewModal extends Modal {
         // 宽度控制：同时作用于预览容器与真实截图节点
         const initialWidth = 500;
         this.currentWidth = initialWidth;
-        new Setting(contentEl).setName('宽度').addSlider((slider) => {
+        new Setting(contentEl).setName(t('modalWidth')).addSlider((slider) => {
             slider
                 .setLimits(300, 1000, 10)
                 .setValue(initialWidth)
@@ -80,42 +81,46 @@ export class SharePreviewModal extends Modal {
                     );
                 });
         });
-        new Setting(contentEl).setName('样式').addDropdown((dropdown) => {
-            dropdown
-                .addOptions({
-                    classic: '经典样式',
-                    minimal: '极简样式',
-                    'image-left': '左图右文',
-                })
-                .setValue(this.styleKey)
-                .onChange((val) => {
-                    if (this.onChangeStyle) {
-                        const newCard = this.onChangeStyle(val);
-                        // 更新样式key
-                        this.styleKey = val;
-                        this.cardEl = newCard;
-                        // 维持当前宽度到新的真实节点
-                        if (this.currentWidth) {
-                            this.cardEl.classList.add(
-                                'foliate-share-card-dynamic'
-                            );
-                            this.cardEl.style.setProperty(
-                                '--share-card-width',
-                                `${this.currentWidth}px`
-                            );
-                            this.cardEl.style.setProperty(
-                                '--share-card-max-width',
-                                `${this.currentWidth}px`
-                            );
+        new Setting(contentEl)
+            .setName(t('modalStyle'))
+            .addDropdown((dropdown) => {
+                dropdown
+                    .addOptions({
+                        classic: t('style_classic'),
+                        minimal: t('style_minimal'),
+                        'image-left': t('style_image_left'),
+                    })
+                    .setValue(this.styleKey)
+                    .onChange((val) => {
+                        if (this.onChangeStyle) {
+                            const newCard = this.onChangeStyle(val);
+                            // 更新样式key
+                            this.styleKey = val;
+                            this.cardEl = newCard;
+                            // 维持当前宽度到新的真实节点
+                            if (this.currentWidth) {
+                                this.cardEl.classList.add(
+                                    'foliate-share-card-dynamic'
+                                );
+                                this.cardEl.style.setProperty(
+                                    '--share-card-width',
+                                    `${this.currentWidth}px`
+                                );
+                                this.cardEl.style.setProperty(
+                                    '--share-card-max-width',
+                                    `${this.currentWidth}px`
+                                );
+                            }
+                            // 更新预览
+                            body.empty();
+                            const cloned = newCard.cloneNode(
+                                true
+                            ) as HTMLElement;
+                            this.previewEl = cloned;
+                            body.appendChild(cloned);
                         }
-                        // 更新预览
-                        body.empty();
-                        const cloned = newCard.cloneNode(true) as HTMLElement;
-                        this.previewEl = cloned;
-                        body.appendChild(cloned);
-                    }
-                });
-        });
+                    });
+            });
 
         const body = contentEl.createEl('div', { cls: 'foliate-share-body' });
         // 放入卡片的克隆，避免引用外部节点
@@ -137,16 +142,18 @@ export class SharePreviewModal extends Modal {
         });
 
         const downloadBtn = footer.createEl('button', {
-            text: '下载图片',
+            text: t('downloadImage'),
             cls: 'mod-cta',
         });
-        const copyBtn = footer.createEl('button', { text: '复制到剪贴板' });
+        const copyBtn = footer.createEl('button', {
+            text: t('copyToClipboard'),
+        });
 
         const setBusy = (v: boolean) => {
             this.processing = v;
             downloadBtn.disabled = v;
             copyBtn.disabled = v;
-            downloadBtn.textContent = v ? '处理中…' : '下载图片';
+            downloadBtn.textContent = v ? t('processing') : t('downloadImage');
         };
 
         downloadBtn.addEventListener('click', async () => {
@@ -154,10 +161,10 @@ export class SharePreviewModal extends Modal {
             try {
                 setBusy(true);
                 await this.actions.onDownload();
-                new Notice('已下载图片');
+                new Notice(t('imageDownloaded'));
             } catch (e) {
                 console.error(e);
-                new Notice('下载失败');
+                new Notice(t('downloadFailed'));
             } finally {
                 setBusy(false);
             }
@@ -168,10 +175,10 @@ export class SharePreviewModal extends Modal {
             try {
                 setBusy(true);
                 await this.actions.onCopy();
-                new Notice('已复制图片到剪贴板');
+                new Notice(t('imageCopiedToClipboard'));
             } catch (e) {
                 console.error(e);
-                new Notice('复制失败');
+                new Notice(t('copyFailed'));
             } finally {
                 setBusy(false);
             }

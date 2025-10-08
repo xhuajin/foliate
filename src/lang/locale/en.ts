@@ -143,4 +143,15 @@ export default {
     settings_clearAllProgress_confirm:
         'This will delete ALL reading records. Continue?',
     settings_clearAllProgress_done: 'All reading records cleared',
+
+    // SharePreviewModal
+    modalWidth: 'Width',
+    modalStyle: 'Style',
+    downloadImage: 'Download Image',
+    copyToClipboard: 'Copy to Clipboard',
+    processing: 'Processing...',
+    imageDownloaded: 'Image downloaded',
+    downloadFailed: 'Download failed',
+    imageCopiedToClipboard: 'Image copied to clipboard',
+    copyFailed: 'Copy failed',
 };

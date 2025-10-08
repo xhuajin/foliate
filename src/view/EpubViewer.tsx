@@ -641,10 +641,10 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
             const f = app.vault.getAbstractFileByPath(path);
             if (f && f instanceof TFile) {
                 try {
-                    await app.vault.delete(f);
+                    await app.fileManager.trashFile(f);
                     new Notice(t('deletedExcerptFile'));
                 } catch (err) {
-                    console.error('删除摘录文件失败:', err);
+                    console.error(t('failedToDeleteExcerptFile'), err);
                     new Notice(t('failedToDeleteExcerptFile'));
                 }
             }
