@@ -219,8 +219,6 @@ const EpubToc: React.FC<EpubTocProps> = ({
         features: [syncDataLoaderFeature, hotkeysCoreFeature, expandAllFeature],
     });
 
-    let beforeCurrentItem = true;
-
     return (
         <div className="epub-toc-container">
             <div className="toc-toolbar">
@@ -286,7 +284,6 @@ const EpubToc: React.FC<EpubTocProps> = ({
                         const itemData = item.getItemData();
                         const isCurrentItem =
                             currentTocItem && currentTocItem.id === itemData.id;
-                        if (isCurrentItem) beforeCurrentItem = false;
 
                         return (
                             <TreeItem
@@ -300,15 +297,13 @@ const EpubToc: React.FC<EpubTocProps> = ({
                             >
                                 <TreeItemLabel
                                     className={cn(
+                                        'text-(--nav-item-color)',
                                         'hover:bg-(--nav-item-background-hover) hover:text-(--nav-item-color-hover) transition-all duration-150',
                                         'before:bg-background relative before:absolute before:inset-x-0 before:-inset-y-0.5 before:-z-10 cursor-pointer',
                                         'py-[3px]',
                                         isCurrentItem
-                                            ? 'bg-(--nav-item-background-active) text-(--nav-item-color-active)'
-                                            : '',
-                                        beforeCurrentItem
-                                            ? 'opacity-70'
-                                            : 'opacity-100'
+                                            ? 'bg-(--nav-item-background-active) text-(--nav-item-color-highlighted) hover:text-(--nav-item-color-highlighted)'
+                                            : ''
                                     )}
                                     onClick={() => handleTocItemClick(itemData)}
                                 />
