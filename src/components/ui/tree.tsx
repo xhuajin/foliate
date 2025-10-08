@@ -154,6 +154,9 @@ function TreeItemLabel({
                 'in-focus-visible:ring-ring/50 hover:bg-accent in-data-[selected=true]:bg-accent in-data-[selected=true]:text-accent-foreground in-data-[drag-target=true]:bg-accent flex items-center gap-1 rounded-sm px-2 py-1.5 text-sm transition-all not-in-data-[folder=true]:ps-7 in-focus-visible:ring-[3px] in-data-[search-match=true]:bg-blue-400/20! [&_svg]:pointer-events-none [&_svg]:shrink-0 min-w-0',
                 className
             )}
+            onClick={(e) => {
+                if (!item.isFolder() && onClick) onClick(e);
+            }}
             {...props}
         >
             {item.isFolder() && (
@@ -162,7 +165,7 @@ function TreeItemLabel({
                     size={16}
                 />
             )}
-            <span className="truncate min-w-0" onClick={onClick}>
+            <span className="truncate min-w-0">
                 {children ||
                     (typeof item.getItemName === 'function'
                         ? item.getItemName()
