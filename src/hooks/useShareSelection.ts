@@ -30,15 +30,14 @@ export function useShareSelection({
 
     async function getCoverDataUrl(): Promise<string | undefined> {
         try {
-            if (!book?.loadBlob) return undefined;
-            const coverBlob: Blob | undefined = await book.loadBlob('cover');
-            console.log('coverBlob', coverBlob);
-            if (!coverBlob) return undefined;
+            if (!book?.getCover) return undefined;
+            const cover: Blob | undefined = await book.getCover();
+            if (!cover) return undefined;
             const reader = new FileReader();
             const dataUrl = await new Promise<string>((resolve, reject) => {
                 reader.onload = () => resolve(reader.result as string);
                 reader.onerror = reject;
-                reader.readAsDataURL(coverBlob);
+                reader.readAsDataURL(cover);
             });
             return dataUrl;
         } catch (_) {

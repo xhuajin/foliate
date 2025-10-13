@@ -122,6 +122,13 @@ export default {
     settings_autoSaveProgress_name: 'Auto save progress',
     settings_autoSaveProgress_desc:
         'Automatically store reading progress and position',
+    settings_enableKeyboardNavigation_name: 'Enable keyboard navigation',
+    settings_enableKeyboardNavigation_desc:
+        'Allow using keyboard arrow keys for navigation',
+    settings_enableMouseSideButtonNavigation_name:
+        'Enable mouse side button navigation',
+    settings_enableMouseSideButtonNavigation_desc:
+        'Allow using mouse side buttons for navigation',
     settings_showReadingProgress_name: 'Show reading progress',
     settings_showReadingProgress_desc: 'Display reading progress information',
     settings_maxRecentBooks_name: 'Recent books count',

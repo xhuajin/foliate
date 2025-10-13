@@ -98,7 +98,6 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                 let coverUrl = undefined;
                 try {
                     const coverBlob = await book.loadBlob('cover');
-                    console.log('coverBlob', coverBlob);
                     if (coverBlob) {
                         // 将 Blob 转换为 base64 字符串
                         const reader = new FileReader();
@@ -980,6 +979,86 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
             new Notice(t('excerptCopiedToClipboard'));
         }
     };
+
+    // 鼠标侧键导航，键盘左右按键导航
+    useEffect(() => {
+        if (!viewerRef.current) return;
+
+        const readerContainer =
+            app.workspace.getActiveViewOfType(EpubReaderView)?.containerEl;
+        if (!readerContainer) return;
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // 只在阅读器容器内处理
+            if (!readerContainer) return;
+
+            // 左箭头 - 上一页
+            if (e.key === 'ArrowLeft' && currentSectionIndex > 0) {
+                e.preventDefault();
+                goToPrevSection();
+            }
+            // 右箭头 - 下一页
+            else if (
+                e.key === 'ArrowRight' &&
+                book?.sections &&
+                currentSectionIndex < book.sections.length - 1
+            ) {
+                e.preventDefault();
+                goToNextSection();
+            }
+        };
+
+        const handleMouseSideButtons = (e: MouseEvent) => {
+            // 只在阅读器容器内处理
+            if (!readerContainer.contains(e.target as Node)) return;
+
+            // 阻止默认的浏览器前进/后退
+            if (e.button === 3 || e.button === 4) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            // 侧键后退（通常是左侧键）- 上一页
+            if (e.button === 3 && currentSectionIndex > 0) {
+                goToPrevSection();
+            }
+            // 侧键前进（通常是右侧键）- 下一页
+            else if (
+                e.button === 4 &&
+                book?.sections &&
+                currentSectionIndex < book.sections.length - 1
+            ) {
+                goToNextSection();
+            }
+        };
+
+        // 注册监听器
+        const abortController = new AbortController();
+
+        if (plugin.settings.enableKeyboardNavigation) {
+            document.addEventListener('keydown', handleKeyDown, {
+                capture: true,
+                signal: abortController.signal,
+            });
+        }
+
+        if (plugin.settings.enableMouseSideButtonNavigation) {
+            document.addEventListener('mousedown', handleMouseSideButtons, {
+                capture: true,
+                signal: abortController.signal,
+            });
+
+            document.addEventListener('mouseup', handleMouseSideButtons, {
+                capture: true,
+                signal: abortController.signal,
+            });
+        }
+
+        // 清理
+        return () => {
+            abortController.abort();
+        };
+    }, [currentSectionIndex, book, goToPrevSection, goToNextSection]);
 
     // 分享 Hook
     const { shareText, isSharing } = useShareSelection({

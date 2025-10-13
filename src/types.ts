@@ -76,6 +76,7 @@ export interface EpubType {
     resources: EpubResource[];
     sections: EpubSection[];
     toc: EpubTocItem[];
+    getCover: () => Promise<Blob | undefined>;
 }
 
 export interface EpubReadingProgress {
@@ -103,7 +104,9 @@ export interface FoliateSettings {
     // 字体偏好：是否优先使用书籍自带字体
     preferBookFont: boolean;
 
-    // 阅读进度
+    // 阅读设置
+    enableKeyboardNavigation: boolean;
+    enableMouseSideButtonNavigation: boolean;
     recentBooks: EpubReadingProgress[];
     maxRecentBooks: number;
 

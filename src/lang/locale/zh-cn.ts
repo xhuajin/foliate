@@ -121,6 +121,12 @@ export default {
     settings_reading_heading: '阅读设置',
     settings_autoSaveProgress_name: '自动保存进度',
     settings_autoSaveProgress_desc: '自动保存阅读进度与位置',
+    settings_enableKeyboardNavigation_name: '启用键盘导航',
+    settings_enableKeyboardNavigation_desc:
+        '允许使用键盘方向键进行上一页/下一页的导航',
+    settings_enableMouseSideButtonNavigation_name: '启用鼠标侧键导航',
+    settings_enableMouseSideButtonNavigation_desc:
+        '允许使用鼠标侧键进行上一页/下一页的导航',
     settings_showReadingProgress_name: '显示阅读进度',
     settings_showReadingProgress_desc: '在界面中显示阅读进度信息',
     settings_maxRecentBooks_name: '最近阅读记录数',

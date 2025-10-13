@@ -212,6 +212,8 @@ button:not(.clickable-icon).foliate-button {
     overflow: auto;
     background: var(--background-primary);
     padding: var(--file-margins);
+    -webkit-user-select: text;
+    user-select: text;
 }
 
 .epub-content {
@@ -224,6 +226,8 @@ button:not(.clickable-icon).foliate-button {
 .epub-reader-container .epub-reader-content p {
     font-family: var(--font-text);
     line-height: var(--epub-line-height, 1.6);
+    -webkit-user-select: text;
+    user-select: text;
 }
 
 /* 使用 CSS 变量控制行高，避免内联样式的优先级问题 */

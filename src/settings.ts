@@ -16,6 +16,8 @@ export const DEFAULT_SETTINGS: FoliateSettings = {
     excerptStorageMode: 'per-note',
     autoSaveProgress: true,
     showReadingProgress: true,
+    enableKeyboardNavigation: true,
+    enableMouseSideButtonNavigation: true,
 };
 
 class FoliateSettingTab extends PluginSettingTab {
@@ -104,14 +106,41 @@ class FoliateSettingTab extends PluginSettingTab {
                     })
             );
 
+        // new Setting(containerEl)
+        //     .setName(t('settings_showReadingProgress_name'))
+        //     .setDesc(t('settings_showReadingProgress_desc'))
+        //     .addToggle((toggle) =>
+        //         toggle
+        //             .setValue(this.plugin.settings.showReadingProgress)
+        //             .onChange(async (value) => {
+        //                 this.plugin.settings.showReadingProgress = value;
+        //                 await this.plugin.saveSettings();
+        //             })
+        //     );
+
         new Setting(containerEl)
-            .setName(t('settings_showReadingProgress_name'))
-            .setDesc(t('settings_showReadingProgress_desc'))
+            .setName(t('settings_enableKeyboardNavigation_name'))
+            .setDesc(t('settings_enableKeyboardNavigation_desc'))
             .addToggle((toggle) =>
                 toggle
-                    .setValue(this.plugin.settings.showReadingProgress)
+                    .setValue(this.plugin.settings.enableKeyboardNavigation)
                     .onChange(async (value) => {
-                        this.plugin.settings.showReadingProgress = value;
+                        this.plugin.settings.enableKeyboardNavigation = value;
+                        await this.plugin.saveSettings();
+                    })
+            );
+
+        new Setting(containerEl)
+            .setName(t('settings_enableMouseSideButtonNavigation_name'))
+            .setDesc(t('settings_enableMouseSideButtonNavigation_desc'))
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(
+                        this.plugin.settings.enableMouseSideButtonNavigation
+                    )
+                    .onChange(async (value) => {
+                        this.plugin.settings.enableMouseSideButtonNavigation =
+                            value;
                         await this.plugin.saveSettings();
                     })
             );
