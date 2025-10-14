@@ -3,29 +3,31 @@ import { getLanguage } from 'obsidian';
 import en from './locale/en';
 import zhCN from './locale/zh-cn';
 
-let locale: Partial<typeof en> | null = null;
+const localeMap: { [key: string]: Partial<typeof en> } = {
+    en,
+    zh: zhCN,
+};
 
-function loadLocale(lang: string): Partial<typeof en> {
-    if (lang === 'zh') return zhCN;
-    return en;
-}
-
-export function t(str: keyof typeof en, ...args: (string | number)[]): string {
-    if (!locale) {
-        // const LOCALE = localStorage.getItem('language')?.toLowerCase() || 'en';
-        const LOCALE = getLanguage()?.toLowerCase() || 'en';
-        locale = loadLocale(LOCALE);
-    }
-    let text = (locale && locale[str]) || en[str];
+export function t(
+    localizationId: keyof typeof en,
+    ...inserts: (string | number)[]
+): string {
+    const lang = getLanguage();
+    const userLocale = localeMap[lang || 'en'];
+    let localeStr =
+        userLocale?.[localizationId] ?? en[localizationId] ?? localizationId;
 
     // Simple parameter substitution for {0}, {1}, etc.
-    if (args.length > 0) {
-        args.forEach((arg, index) => {
-            text = text.replace(new RegExp(`\\{${index}\\}`, 'g'), String(arg));
+    if (inserts.length > 0) {
+        inserts.forEach((arg, index) => {
+            localeStr = localeStr.replace(
+                new RegExp(`\\{${index}\\}`, 'g'),
+                String(arg)
+            );
         });
     }
 
-    return text;
+    return localeStr;
 }
 
 /*
