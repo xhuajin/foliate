@@ -1,7 +1,7 @@
 {
     "id": "foliate",
     "name": "Foliate",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "minAppVersion": "1.4.0",
     "description": "Read e-books in style with Foliate, a simple and modern e-book viewer.",
     "author": "Huajin",
