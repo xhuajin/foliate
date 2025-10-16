@@ -1,94 +1,62 @@
-import { ItemView, ViewStateResult, WorkspaceLeaf } from 'obsidian';
+import { FileView, TFile, ViewStateResult, WorkspaceLeaf } from 'obsidian';
 import { createRoot, Root } from 'react-dom/client';
 import * as React from 'react';
 import EpubViewer from './EpubViewer';
 import type FoliatePlugin from '../main';
 import { t } from '@/lang/helpers';
 
+export const EPUB_FILE_EXTENSION = 'epub';
 export const EPUB_VIEW_TYPE = 'epub-reader-view';
 
-export class EpubReaderView extends ItemView {
+export class EpubReaderView extends FileView {
     private root: Root | null = null;
-    private filePath: string;
-    private fileName: string;
-    public file: { path: string } | null = null;
+    public plugin: FoliatePlugin;
     private isClosing: boolean = false;
-    private plugin: FoliatePlugin;
+    override navigation: boolean = true;
 
-    constructor(
-        leaf: WorkspaceLeaf,
-        plugin: FoliatePlugin,
-        filePath: string = '',
-        fileName: string = ''
-    ) {
+    constructor(leaf: WorkspaceLeaf, plugin: FoliatePlugin) {
         super(leaf);
         this.plugin = plugin;
-        // 尝试从 leaf 的状态中获取文件信息
-        const viewState = leaf.getViewState();
-        if (
-            viewState &&
-            viewState.state &&
-            typeof viewState.state === 'object' &&
-            'file' in viewState.state
-        ) {
-            const fileFromState = viewState.state.file;
-            if (
-                typeof fileFromState === 'string' &&
-                fileFromState.trim() !== ''
-            ) {
-                this.filePath = fileFromState;
-                this.fileName = this.extractFileName(fileFromState);
-            } else {
-                this.filePath = filePath;
-                this.fileName = fileName || this.extractFileName(filePath);
-            }
-        } else {
-            this.filePath = filePath;
-            this.fileName = fileName || this.extractFileName(filePath);
-        }
-
-        this.file = this.filePath ? { path: this.filePath } : null;
-    }
-
-    // 从文件路径提取文件名的辅助方法
-    private extractFileName(filePath: string): string {
-        if (!filePath || filePath.trim() === '') {
-            return '';
-        }
-        const pathParts = filePath.split(/[/\\]/);
-        return pathParts[pathParts.length - 1] || '';
+        this.app = plugin.app;
     }
 
     // 添加方法来设置文件信息
-    setFileInfo(filePath: string, fileName: string): void {
-        const oldFileName = this.fileName;
-        this.filePath = filePath;
-        this.fileName = fileName || this.extractFileName(filePath);
-        this.file = { path: filePath };
+    // setFileInfo({
+    //     file,
+    //     filePath,
+    //     fileName,
+    // }: {
+    //     file?: TFile | null;
+    //     filePath?: string;
+    //     fileName?: string;
+    // }): void {
+    //     const oldFileName = this.fileName;
+    //     this.filePath = filePath || this.filePath;
+    //     this.fileName = fileName || this.extractFileName(this.filePath);
+    //     this.file = file || this.file;
 
-        // 如果文件名改变了，重新设置视图状态以触发标题更新
-        if (oldFileName !== this.fileName) {
-            // 通过设置新的视图状态来触发Obsidian更新标题
-            this.leaf.setViewState({
-                type: EPUB_VIEW_TYPE,
-                state: { file: filePath },
-                active: true,
-            });
-        }
+    //     // 如果文件名改变了，重新设置视图状态以触发标题更新
+    //     if (oldFileName !== this.fileName) {
+    //         // 通过设置新的视图状态来触发Obsidian更新标题
+    //         this.leaf.setViewState({
+    //             type: EPUB_VIEW_TYPE,
+    //             state: { file: this.file },
+    //             active: true,
+    //         });
+    //     }
 
-        // 如果视图已经打开，重新渲染
-        if (this.root) {
-            this.renderComponent();
-        }
-    }
+    //     // 如果视图已经打开，重新渲染
+    //     if (this.root) {
+    //         this.renderComponent();
+    //     }
+    // }
 
     private renderComponent(): void {
-        if (!this.root) return;
+        if (!this.root || !this.file) return;
         // 渲染 Editor 组件
         this.root.render(
             React.createElement(EpubViewer, {
-                filePath: this.filePath,
-                fileName: this.fileName,
+                file: this.file,
                 app: this.app,
                 plugin: this.plugin,
             })
@@ -99,8 +67,12 @@ export class EpubReaderView extends ItemView {
         return EPUB_VIEW_TYPE;
     }
 
-    getDisplayText(): string {
-        return `${this.fileName.split('.epub')[0]}`;
+    override getDisplayText() {
+        if (this.file) {
+            return this.file.basename;
+        } else {
+            return 'No File';
+        }
     }
 
     override getIcon(): string {
@@ -109,25 +81,23 @@ export class EpubReaderView extends ItemView {
 
     // 处理视图状态变化
     override async setState(
-        state: { file?: string },
+        state: {
+            file?: TFile | null;
+            filePath?: string;
+            fileName?: string;
+        } | null,
         result: ViewStateResult
     ): Promise<void> {
         // 如果传入的state包含空文件路径，但我们已经有文件信息，就不要覆盖
-        if (state && typeof state.file === 'string') {
-            if (state.file && state.file.trim() !== '') {
-                this.filePath = state.file;
-                this.fileName = this.extractFileName(state.file);
-                this.file = { path: state.file };
+        if (state && state.file instanceof TFile) {
+            // this.filePath = state.filePath || this.filePath;
+            // this.fileName =
+            //     state.fileName || this.extractFileName(this.filePath);
+            this.file = state.file || this.file;
 
-                // 如果组件已经渲染，重新渲染
-                if (this.root) {
-                    this.renderComponent();
-                }
-            } else if (state.file === '' && this.filePath !== '') {
-                // 不做任何操作，保持现有的文件信息
-                return super.setState(state, result);
-            } else {
-                console.log(t('gotFilePathFromSetState', state.file));
+            // 如果组件已经渲染，重新渲染
+            if (this.root) {
+                this.renderComponent();
             }
         }
 
@@ -138,52 +108,36 @@ export class EpubReaderView extends ItemView {
         const state = super.getState();
         return {
             ...state,
-            file: this.filePath,
+            file: this.file,
         };
     }
 
-    override async onOpen(): Promise<void> {
-        // 如果没有文件路径，尝试从应用程序状态获取
-        if (!this.filePath) {
-            const activeFile = this.app.workspace.getActiveFile();
-            if (activeFile && activeFile.extension === 'epub') {
-                this.filePath = activeFile.path;
-                this.fileName = activeFile.name;
-                this.file = { path: activeFile.path };
-            } else {
-                // 尝试查找最近访问的EPUB文件
-                const epubFiles = this.app.vault
-                    .getFiles()
-                    .filter((f) => f.extension === 'epub');
-                if (epubFiles.length > 0 && epubFiles[0]) {
-                    this.filePath = epubFiles[0].path;
-                    this.fileName = epubFiles[0].name;
-                    this.file = { path: epubFiles[0].path };
-                } else {
-                    console.log(t('noEpubFilesFound'));
-                }
-            }
-        }
-
-        // 确保文件名不为空
-        if (!this.fileName && this.filePath) {
-            this.fileName = this.extractFileName(this.filePath);
-        }
-
-        const container = this.containerEl.children[1];
-        if (!container) {
-            console.error(t('containerElementNotFound'));
-            return;
-        }
-
-        container.empty();
+    override async onLoadFile(file: TFile): Promise<void> {
+        this.file = file;
+        this.contentEl.empty();
         // 创建 React 根容器
-        this.root = createRoot(container as HTMLElement);
+        this.root = createRoot(this.contentEl as HTMLElement);
         // 渲染 React 组件 - 使用 React.createElement 语法
         this.renderComponent();
     }
 
     override async onClose(): Promise<void> {
+        // 防止重复调用
+        if (this.isClosing) return;
+        this.isClosing = true;
+
+        // 清理 React 组件
+        if (this.root) {
+            this.root.unmount();
+            this.root = null;
+        }
+    }
+
+    override canAcceptExtension(extension: string) {
+        return extension == EPUB_FILE_EXTENSION;
+    }
+
+    override async onunload(): Promise<void> {
         // 防止重复调用
         if (this.isClosing) return;
         this.isClosing = true;

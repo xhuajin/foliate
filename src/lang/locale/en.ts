@@ -150,6 +150,14 @@ export default {
     settings_clearAllProgress_confirm:
         'This will delete ALL reading records. Continue?',
     settings_clearAllProgress_done: 'All reading records cleared',
+    settings_clearBookProgress_desc: "Clear this book's reading record",
+    settings_clearBookProgress_button: 'Clear',
+    settings_bookProgress: 'Progress: {0}/{1} ({2}%)',
+    settings_lastRead: 'Last read: {0}',
+    settings_recentBooks_pagination: 'Page {0}/{1}',
+    settings_previousPage: 'Previous',
+    settings_nextPage: 'Next',
+    settings_bookCleared: 'Cleared reading record for "{0}"',
 
     // SharePreviewModal
     modalWidth: 'Width',

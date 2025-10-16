@@ -22,6 +22,7 @@ export const DEFAULT_SETTINGS: FoliateSettings = {
 
 class FoliateSettingTab extends PluginSettingTab {
     plugin: FoliatePlugin;
+    private currentPage = 0;
 
     constructor(app: App, plugin: FoliatePlugin) {
         super(app, plugin);
@@ -192,69 +193,122 @@ class FoliateSettingTab extends PluginSettingTab {
         //             });
         // });
 
-        if (this.plugin.settings.excerptStorageMode === 'daily-note') {
-            // new Setting(containerEl)
-            //     .setName('摘录到日记')
-            //     .setDesc('摘录内容将追加到每日笔记中')
-            //     .addTextArea()
-        } else if (this.plugin.settings.excerptStorageMode === 'per-note') {
-            // new Setting(containerEl)
-            //     .setName('每个摘录单独一个文件')
-            //     .setDesc('每个摘录将保存为单独的文件')
-            //     .addTextArea()
-        } else if (this.plugin.settings.excerptStorageMode === 'per-book') {
-            // new Setting(containerEl)
-            //     .setName('每本书一个文件')
-            //     .setDesc('每本书的所有摘录将保存为一个文件')
-            //     .addTextArea()
-        } else if (this.plugin.settings.excerptStorageMode === 'single-note') {
-            // new Setting(containerEl)
-            //     .setName('所有摘录一个文件')
-            //     .setDesc('所有摘录将保存为一个文件')
-            //     .addTextArea()
-        }
+        // if (this.plugin.settings.excerptStorageMode === 'daily-note') {
+        //     new Setting(containerEl)
+        //         .setName('摘录到日记')
+        //         .setDesc('摘录内容将追加到每日笔记中')
+        //         .addTextArea()
+        // } else if (this.plugin.settings.excerptStorageMode === 'per-note') {
+        //     new Setting(containerEl)
+        //         .setName('每个摘录单独一个文件')
+        //         .setDesc('每个摘录将保存为单独的文件')
+        //         .addTextArea()
+        // } else if (this.plugin.settings.excerptStorageMode === 'per-book') {
+        //     new Setting(containerEl)
+        //         .setName('每本书一个文件')
+        //         .setDesc('每本书的所有摘录将保存为一个文件')
+        //         .addTextArea()
+        // } else if (this.plugin.settings.excerptStorageMode === 'single-note') {
+        //     new Setting(containerEl)
+        //         .setName('所有摘录一个文件')
+        //         .setDesc('所有摘录将保存为一个文件')
+        //         .addTextArea()
+        // }
 
         // 最近阅读的书籍
         if (this.plugin.settings.recentBooks.length > 0) {
-            new Setting(containerEl)
-                .setName(t('settings_recent_heading'))
-                .setHeading();
-
             const recentBooks = this.plugin.getRecentBooks();
-            for (const book of recentBooks.slice(0, 5)) {
-                const bookContainer = containerEl.createEl('div', {
-                    cls: 'recent-book-item',
-                    attr: {
-                        style: 'padding: 10px; border: 1px solid var(--background-modifier-border); margin: 5px 0; border-radius: 5px;',
-                    },
-                });
+            const booksPerPage = 5; // 每页显示的书籍数量
+            const totalPages = Math.ceil(recentBooks.length / booksPerPage);
 
-                bookContainer.createEl('div', {
-                    text: book.fileName,
-                    cls: 'book-title',
-                    attr: { style: 'font-weight: bold; margin-bottom: 5px;' },
-                });
+            // 确保当前页面在有效范围内
+            if (this.currentPage >= totalPages) {
+                this.currentPage = Math.max(0, totalPages - 1);
+            }
 
-                const progress = Math.round(
+            // 获取当前页面的书籍
+            const startIndex = this.currentPage * booksPerPage;
+            const endIndex = Math.min(
+                startIndex + booksPerPage,
+                recentBooks.length
+            );
+            const currentPageBooks = recentBooks.slice(startIndex, endIndex);
+
+            // 分页导航（如果需要）
+            if (totalPages > 1) {
+                const paginationSetting = new Setting(containerEl)
+                    .setName(
+                        `${t('settings_recent_heading')} (${t('settings_recentBooks_pagination', String(this.currentPage + 1), String(totalPages))})`
+                    )
+                    .setHeading()
+                    .setDesc('');
+
+                if (this.currentPage > 0) {
+                    paginationSetting.addButton((button) =>
+                        button
+                            .setButtonText(t('settings_previousPage'))
+                            .onClick(() => {
+                                this.currentPage--;
+                                this.display();
+                            })
+                    );
+                }
+
+                if (this.currentPage < totalPages - 1) {
+                    paginationSetting.addButton((button) =>
+                        button
+                            .setButtonText(t('settings_nextPage'))
+                            .onClick(() => {
+                                this.currentPage++;
+                                this.display();
+                            })
+                    );
+                }
+            } else {
+                new Setting(containerEl)
+                    .setName(t('settings_recent_heading'))
+                    .setHeading();
+            }
+
+            // 显示当前页面的书籍
+            for (const book of currentPageBooks) {
+                const rawProgress =
                     (book.sectionIndex / Math.max(book.totalSections - 1, 1)) *
-                        100
-                );
-                bookContainer.createEl('div', {
-                    text: `进度: ${book.sectionIndex + 1}/${book.totalSections} (${progress}%)`,
-                    cls: 'book-progress',
-                    attr: {
-                        style: 'font-size: 0.9em; color: var(--text-muted);',
-                    },
-                });
-
+                    100;
+                const progress =
+                    rawProgress % 1 === 0
+                        ? Math.round(rawProgress)
+                        : Math.round(rawProgress * 10) / 10;
                 const lastReadDate = new Date(book.lastRead).toLocaleString();
-                bookContainer.createEl('div', {
-                    text: `最后阅读: ${lastReadDate}`,
-                    cls: 'book-last-read',
-                    attr: {
-                        style: 'font-size: 0.8em; color: var(--text-muted);',
-                    },
-                });
+
+                const progressText = t(
+                    'settings_bookProgress',
+                    String(book.sectionIndex + 1),
+                    String(book.totalSections),
+                    String(progress)
+                );
+                const lastReadText = t('settings_lastRead', lastReadDate);
+
+                new Setting(containerEl)
+                    .setName(book.fileName)
+                    .setDesc(`${progressText}\n${lastReadText}`)
+                    .addButton((button) =>
+                        button
+                            .setButtonText(
+                                t('settings_clearBookProgress_button')
+                            )
+                            .setTooltip(t('settings_clearBookProgress_desc'))
+                            .onClick(async () => {
+                                // 清除这本书的阅读记录
+                                await this.plugin.clearBookProgress(
+                                    book.filePath
+                                );
+                                new Notice(
+                                    t('settings_bookCleared', book.fileName)
+                                );
+                                this.display(); // 刷新界面
+                            })
+                    );
             }
         }
 

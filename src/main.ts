@@ -1,4 +1,4 @@
-import { Plugin, TFile } from 'obsidian';
+import { Plugin, TFile, WorkspaceLeaf } from 'obsidian';
 import { EpubReaderView, EPUB_VIEW_TYPE } from './view/EpubReaderView.tsx';
 import {
     ReadingHistoryView,
@@ -18,20 +18,10 @@ export default class FoliatePlugin extends Plugin {
         await this.loadSettings();
 
         // 注册 EPUB 阅读器视图
-        this.registerView(EPUB_VIEW_TYPE, (leaf) => {
-            // 尝试从工作区获取当前活动文件
-            const activeFile = this.app.workspace.getActiveFile();
-            if (activeFile && activeFile.extension === 'epub') {
-                return new EpubReaderView(
-                    leaf,
-                    this,
-                    activeFile.path,
-                    activeFile.name
-                );
-            }
-
-            return new EpubReaderView(leaf, this, '', '');
-        });
+        this.registerView(
+            EPUB_VIEW_TYPE,
+            (leaf: WorkspaceLeaf) => new EpubReaderView(leaf, this)
+        );
 
         // 注册 EPUB 目录视图
         this.registerView(EPUB_TOC_VIEW_TYPE, (leaf) => {
@@ -45,6 +35,18 @@ export default class FoliatePlugin extends Plugin {
 
         // 注册 EPUB 文件扩展名处理器 - 左键点击时直接打开
         this.registerExtensions(['epub'], EPUB_VIEW_TYPE);
+        // this.registerEvent(
+        //     this.app.workspace.on('file-open', (file) => {
+        //         console.log('file-open', file);
+        //         if (file instanceof TFile && file.extension === 'epub') {
+        //             const leaf = this.app.workspace.getLeaf(true);
+        //             leaf.setViewState({
+        //                 type: EPUB_VIEW_TYPE,
+        //                 state: { file: file },
+        //             });
+        //         }
+        //     })
+        // );
 
         // 注册文件菜单处理程序 - 右键点击 .epub 文件时显示选项（保留作为备用）
         this.registerEvent(
@@ -213,6 +215,14 @@ export default class FoliatePlugin extends Plugin {
         await this.saveSettings();
     }
 
+    // 清除指定书籍的阅读记录
+    async clearBookProgress(filePath: string): Promise<void> {
+        this.settings.recentBooks = this.settings.recentBooks.filter(
+            (book) => book.filePath !== filePath
+        );
+        await this.saveSettings();
+    }
+
     async openEpubFile(file: TFile): Promise<void> {
         // 检查是否已经有这个特定文件的视图打开
         const existingLeaf = this.app.workspace
@@ -238,12 +248,12 @@ export default class FoliatePlugin extends Plugin {
         });
 
         // 获取创建的视图并设置文件信息
-        const view = leaf.view as EpubReaderView;
-        if (view && view.setFileInfo) {
-            view.setFileInfo(file.path, file.name);
-        } else {
-            console.error(t('viewCreationFailed'));
-        }
+        // const view = leaf.view as EpubReaderView;
+        // if (view && view.setFileInfo) {
+        //     view.setFileInfo({ filePath: file.path, fileName: file.name });
+        // } else {
+        //     console.error(t('viewCreationFailed'));
+        // }
     }
 
     // 打开阅读历史页面

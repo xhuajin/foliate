@@ -248,6 +248,8 @@ button:not(.clickable-icon).foliate-button {
 
 /* Foliate reader - Minimal styling */
 .epub-reader-container {
+    display: flex;
+    justify-content: center;
     position: relative;
     height: 100%;
     /* max-width: var(--file-line-width); */

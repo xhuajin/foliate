@@ -47,15 +47,13 @@ import { EpubMetadata, EpubType } from '@/types';
 import { ZipEntry } from 'foliate-js/vendor/zip.js';
 
 interface EpubViewerProps {
-    filePath: string;
-    fileName: string;
+    file: TFile;
     app: App; // 添加 app 参数以访问 Obsidian API
     plugin: FoliatePlugin; // 添加插件实例
 }
 
 const EpubViewer: React.FC<EpubViewerProps> = ({
-    filePath,
-    fileName,
+    file,
     app, // 接收 app 参数
     plugin, // 接收插件实例
 }) => {
@@ -77,15 +75,14 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
     const { applyHighlightsForSection } = useExcerpts(
         app,
         plugin,
-        filePath,
-        fileName,
+        file,
         book,
         viewerRef
     );
 
     // 保存阅读进度
     const saveProgress = async (sectionIndex: number) => {
-        if (filePath && plugin.settings.autoSaveProgress) {
+        if (file && plugin.settings.autoSaveProgress) {
             // 提取书籍元数据
             let metadata: EpubMetadata = {};
             if (book?.metadata) {
@@ -97,7 +94,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                 // 获取封面
                 let coverUrl = undefined;
                 try {
-                    const coverBlob = await book.loadBlob('cover');
+                    const coverBlob = await book.getCover();
                     if (coverBlob) {
                         // 将 Blob 转换为 base64 字符串
                         const reader = new FileReader();
@@ -127,10 +124,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                     )
                         Object.assign(metadata, { [k]: v });
                 };
-                assign(
-                    'title',
-                    book.metadata.title || fileName.replace('.epub', '')
-                );
+                assign('title', book.metadata.title || file.basename);
                 assign('author', author);
                 assign('publisher', book.metadata.publisher);
                 assign('language', book.metadata.language);
@@ -142,8 +136,8 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
             }
 
             await plugin.saveReadingProgress({
-                filePath,
-                fileName,
+                filePath: file.path,
+                fileName: file.basename,
                 sectionIndex,
                 scrollPosition: 0, // TODO: 实现滚动位置跟踪
                 lastRead: Date.now(),
@@ -188,16 +182,15 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                 // 使用 Obsidian API 读取文件
 
                 // 获取 TFile 实例
-                const tfile = app.vault
-                    .getFiles()
-                    .find((f) => f.path === filePath);
-                if (!tfile) {
-                    throw new Error(
-                        `${t('file')} ${t('notFound')}: ${filePath}`
-                    );
+                // const tfile = app.vault.getFileByPath(filePath);
+
+                if (!file) {
+                    throw new Error(`${t('file')} ${t('notFound')}`);
                 }
+
+                console.log('open file: ', file);
                 // 使用 vault.readBinary 读取二进制文件
-                const arrayBuffer = await app.vault.readBinary(tfile);
+                const arrayBuffer = await app.vault.readBinary(file);
                 // 创建 ZIP loader（EPUB 文件是 ZIP 格式）
                 const {
                     configure,
@@ -259,7 +252,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                 setBook(epub);
 
                 // 在EPUB加载完成后立即加载保存的进度
-                const progress = plugin.getReadingProgress(filePath);
+                const progress = plugin.getReadingProgress(file.path);
                 if (progress && progress.sectionIndex) {
                     setCurrentSectionIndex(progress.sectionIndex);
                 }
@@ -274,10 +267,10 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
             }
         };
 
-        if (filePath && app) {
+        if (file && file.path && app) {
             loadEpub();
         }
-    }, [filePath, app]);
+    }, [file, app]);
 
     useEffect(() => {
         if (book && viewerRef.current) {
@@ -473,12 +466,11 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
 
     const refreshSection = async () => {
         // 使用 obsidian 的 api，重新打开这个 epub
-        if (filePath) {
-            const file = app.vault.getFileByPath(filePath);
-            if (!file || !(file instanceof TFile)) {
-                new Notice(`${t('file')} ${t('notFound')}: ${filePath}`);
-                return;
-            }
+        // if (!file || !(file instanceof TFile)) {
+        //     new Notice(`${t('file')} ${t('notFound')}: ${file.path}`);
+        //     return;
+        // }
+        if (file && file.path) {
             // 检查是否已经有这个特定文件的视图打开
             const existingLeaf = app.workspace
                 .getLeavesOfType(EPUB_VIEW_TYPE)
@@ -502,12 +494,12 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
             });
 
             // 获取创建的视图并设置文件信息
-            const view = leaf.view as EpubReaderView;
-            if (view && view.setFileInfo) {
-                view.setFileInfo(file.path, file.name);
-            } else {
-                console.error('视图创建失败或没有 setFileInfo 方法');
-            }
+            // const view = leaf.view as EpubReaderView;
+            // if (view && view.setFileInfo) {
+            //     view.setFileInfo({ filePath: file.path, fileName: file.name });
+            // } else {
+            //     console.error('视图创建失败或没有 setFileInfo 方法');
+            // }
         }
     };
 
@@ -795,7 +787,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                     let dailyNote = getDailyNote(date, allDailyNotes);
                     const head = `\n- ${date.format('HH:mm')} `;
                     const content = text.split('\n').join('\n    ');
-                    const footer = `\n    摘录 · 《${book?.metadata?.title || fileName}》第${currentSectionIndex + 1}页 #摘录/${book?.metadata?.title || ''}\n`;
+                    const footer = `\n    摘录 · 《${book?.metadata?.title || file.basename}》第${currentSectionIndex + 1}页 #摘录/${book?.metadata?.title || ''}\n`;
                     const appendText = head + content + footer;
                     if (dailyNote) {
                         await app.vault.append(dailyNote, appendText);
@@ -824,9 +816,9 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
             }
             // 每个摘录单独一个文件
             case 'per-note': {
-                const baseName = fileName.replace(/\.epub$/i, '') || '摘录';
-                const dir = filePath.includes('/')
-                    ? filePath.substring(0, filePath.lastIndexOf('/'))
+                const baseName = file.basename || '摘录';
+                const dir = file.path.includes('/')
+                    ? file.path.substring(0, file.path.lastIndexOf('/'))
                     : '';
                 const date = moment();
                 const noteFolderPath = `${dir ? dir + '/' : ''}${baseName}`;
@@ -836,7 +828,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                     book: book?.metadata?.title || baseName,
                     section: currentSectionIndex + 1,
                     date: date.format('YYYY-MM-DD HH:mm'),
-                    source: fileName,
+                    source: file.basename,
                     range: range,
                     tags: `[摘录, ${book?.metadata?.title || baseName}]`,
                 };
@@ -868,9 +860,9 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
 
             case 'per-book': {
                 // 构建同目录、同名的 Markdown 文件路径
-                const baseName = fileName.replace(/\.epub$/i, '') || '摘录';
-                const dir = filePath.includes('/')
-                    ? filePath.substring(0, filePath.lastIndexOf('/'))
+                const baseName = file.basename || '摘录';
+                const dir = file.path.includes('/')
+                    ? file.path.substring(0, file.path.lastIndexOf('/'))
                     : '';
                 const mdPath = `${dir ? dir + '/' : ''}${baseName}.md`;
 
@@ -911,7 +903,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
 
                     // 保存映射到 settings（按 filePath 标识该书）
                     const map = plugin.settings.perBookExcerptMap || {};
-                    map[filePath] = mdPath;
+                    map[file.path] = mdPath;
                     plugin.settings.perBookExcerptMap = map;
                     await plugin.saveSettings();
                 } catch (err) {
@@ -970,7 +962,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
         const selectedText = getCurrentSelectedText();
         if (selectedText) {
             // 添加到快速捕获（如果有相关插件）
-            const quote = `"${selectedText}" - 《${book?.metadata?.title || fileName}》第${currentSectionIndex + 1}页`;
+            const quote = `"${selectedText}" - 《${book?.metadata?.title || file.basename}》第${currentSectionIndex + 1}页`;
 
             // 尝试写入剪贴板，用户可以手动粘贴
             navigator.clipboard.writeText(quote);
@@ -1066,7 +1058,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
         plugin,
         viewerRef,
         book,
-        fileName,
+        fileName: file.basename,
         currentSectionIndex,
     });
 
@@ -1252,7 +1244,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                     <div className="text-center text-red-500 p-8">
                         <p className="text-lg">{error}</p>
                         <p className="text-sm mt-2">
-                            {t('file')}: {filePath}
+                            {t('file')}: {file.path}
                         </p>
                     </div>
                 </div>
@@ -1272,7 +1264,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                             : 'transform translate-y-0'
                     )}
                 >
-                    {sectionTitle || book?.metadata?.title || fileName}
+                    {sectionTitle || book?.metadata?.title || file.basename}
                 </div>
                 <div className="epub-header-controls">
                     <button className="foliate-button" onClick={toggleTOC}>

@@ -144,6 +144,14 @@ export default {
     settings_clearAllProgress_button: '全部清空',
     settings_clearAllProgress_confirm: '此操作将删除所有阅读记录，是否继续？',
     settings_clearAllProgress_done: '已清空所有阅读记录',
+    settings_clearBookProgress_desc: '清除此书的阅读记录',
+    settings_clearBookProgress_button: '清除',
+    settings_bookProgress: '进度: {0}/{1} ({2}%)',
+    settings_lastRead: '最后阅读: {0}',
+    settings_recentBooks_pagination: '第 {0}/{1} 页',
+    settings_previousPage: '上一页',
+    settings_nextPage: '下一页',
+    settings_bookCleared: '已清除《{0}》的阅读记录',
 
     // SharePreviewModal
     modalWidth: '宽度',

@@ -13,8 +13,7 @@ type Excerpt = {
 export function useExcerpts(
     app: App,
     plugin: FoliatePlugin,
-    filePath: string,
-    fileName: string,
+    file: TFile | null,
     book: EpubType | null,
     viewerRef: React.RefObject<HTMLDivElement>
 ) {
@@ -34,8 +33,9 @@ export function useExcerpts(
     const collectExcerptsForChapter = async (
         sectionIndex: number
     ): Promise<Excerpt[]> => {
-        const title = book?.metadata?.title || getBaseName(fileName);
-        const dir = getDir(filePath);
+        const title =
+            book?.metadata?.title || getBaseName(file?.basename || '');
+        const dir = getDir(file?.path || '');
         // const baseName = getBaseName(fileName);
         const mode = plugin.settings.excerptStorageMode;
         // const sectionObj = book?.sections?.[sectionIndex] || {};
