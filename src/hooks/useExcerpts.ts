@@ -13,28 +13,16 @@ type Excerpt = {
 export function useExcerpts(
     app: App,
     plugin: FoliatePlugin,
-    file: TFile | null,
+    file: TFile,
     book: EpubType | null,
     viewerRef: React.RefObject<HTMLDivElement>
 ) {
-    const getBaseName = (name: string) =>
-        name.replace(/\.epub$/i, '') || '摘录';
     const getDir = (path: string) =>
         path.includes('/') ? path.substring(0, path.lastIndexOf('/')) : '';
-
-    // const readFileIfExists = async (path: string): Promise<string | null> => {
-    //     const f = app.vault.getAbstractFileByPath(path);
-    //     if (f && f instanceof TFile) return await app.vault.read(f);
-    //     return null;
-    // };
-
-    // (old parseExcerptsFromMarkdown removed; keeping hooks lightweight)
-
     const collectExcerptsForChapter = async (
         sectionIndex: number
     ): Promise<Excerpt[]> => {
-        const title =
-            book?.metadata?.title || getBaseName(file?.basename || '');
+        const title = book?.metadata?.title || file.basename;
         const dir = getDir(file?.path || '');
         // const baseName = getBaseName(fileName);
         const mode = plugin.settings.excerptStorageMode;
@@ -92,86 +80,6 @@ export function useExcerpts(
                 console.warn('Unknown excerpt storage mode:', mode);
                 return [];
         }
-
-        // if (mode === 'per-book') {
-        //     const map = plugin.settings.perBookExcerptMap || {};
-        //     const mdPath =
-        //         map[filePath] || `${dir ? dir + '/' : ''}${baseName}.md`;
-        //     const content = await readFileIfExists(mdPath);
-        //     const arr = fromContent(content);
-        //     return arr.map((e) => ({ ...e, sourceFile: mdPath }));
-        // }
-
-        // if (mode === 'single-note') {
-        //     const mdPath =
-        //         plugin.settings.singleExcerptPath || '_Foliate_摘录.md';
-        //     const content = await readFileIfExists(mdPath);
-        //     const arr = fromContent(content);
-        //     return arr.map((e) => ({ ...e, sourceFile: mdPath }));
-        // }
-
-        // if (mode === 'per-note') {
-        //     const files = app.vault
-        //         .getFiles()
-        //         .filter(
-        //             (f) =>
-        //                 f.extension === 'md' &&
-        //                 (dir
-        //                     ? f.path.startsWith(dir + '/')
-        //                     : !f.path.includes('/')) &&
-        //                 new RegExp(
-        //                     `^${escapeRegExp(baseName)} 摘录 .*\.md$`
-        //                 ).test(f.name)
-        //         );
-        //     const excerpts: Excerpt[] = [];
-        //     for (const f of files) {
-        //         const text = await app.vault.read(f);
-        //         const markdown = text.startsWith('---')
-        //             ? text.split('---')[2]
-        //             : text;
-        //         await app.fileManager.processFrontMatter(f, (fm) => {
-        //             if (
-        //                 fm &&
-        //                 fm['book'] === title &&
-        //                 (fm['section'] === sectionIndex + 1 ||
-        //                     fm['section'] === String(sectionIndex + 1))
-        //             ) {
-        //                 markdown?.split('\n').map((p) =>
-        //                     excerpts.push({
-        //                         excerpt: p,
-        //                         sourceFile: f.path,
-        //                         // cfi: frontmatter['cfi'] || null,
-        //                     })
-        //                 );
-        //             }
-        //         });
-        //     }
-        //     return excerpts;
-        // }
-
-        // if (mode === 'daily-note') {
-        //     try {
-        //         const allDaily = getAllDailyNotes();
-        //         const all: Excerpt[] = [];
-        //         for (const f of Object.values(allDaily)) {
-        //             if (f) {
-        //                 const c = await app.vault.read(f);
-        //                 const parsed = parseExcerptsFromMarkdown(
-        //                     c,
-        //                     sectionIndex,
-        //                     title,
-        //                     chapterTitle
-        //                 ).map((e) => ({ ...e, sourceFile: f.path }));
-        //                 all.push(...parsed);
-        //             }
-        //         }
-        //         return all;
-        //     } catch (e) {
-        //         console.warn('读取日记摘录失败：', e);
-        //         return [];
-        //     }
-        // }
-
         return excerpts;
     };
 

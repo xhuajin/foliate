@@ -1,5 +1,5 @@
 import { Plugin, TFile, WorkspaceLeaf } from 'obsidian';
-import { EpubReaderView, EPUB_VIEW_TYPE } from './view/EpubReaderView.tsx';
+import { EpubView, EPUB_VIEW_TYPE } from './view/EpubView.tsx';
 import {
     ReadingHistoryView,
     READING_HISTORY_VIEW_TYPE,
@@ -20,7 +20,7 @@ export default class FoliatePlugin extends Plugin {
         // 注册 EPUB 阅读器视图
         this.registerView(
             EPUB_VIEW_TYPE,
-            (leaf: WorkspaceLeaf) => new EpubReaderView(leaf, this)
+            (leaf: WorkspaceLeaf) => new EpubView(leaf, this)
         );
 
         // 注册 EPUB 目录视图
@@ -35,18 +35,6 @@ export default class FoliatePlugin extends Plugin {
 
         // 注册 EPUB 文件扩展名处理器 - 左键点击时直接打开
         this.registerExtensions(['epub'], EPUB_VIEW_TYPE);
-        // this.registerEvent(
-        //     this.app.workspace.on('file-open', (file) => {
-        //         console.log('file-open', file);
-        //         if (file instanceof TFile && file.extension === 'epub') {
-        //             const leaf = this.app.workspace.getLeaf(true);
-        //             leaf.setViewState({
-        //                 type: EPUB_VIEW_TYPE,
-        //                 state: { file: file },
-        //             });
-        //         }
-        //     })
-        // );
 
         // 注册文件菜单处理程序 - 右键点击 .epub 文件时显示选项（保留作为备用）
         this.registerEvent(
@@ -73,7 +61,7 @@ export default class FoliatePlugin extends Plugin {
         // const statusBarItemEl = this.addStatusBarItem();
         // statusBarItemEl.setText('Foliate Plugin Ready');
 
-        // 这将添加一个设置选项卡，以便用户可以配置插件的各个方面
+        // 设置面板
         this.addSettingTab(new FoliateSettingTab(this.app, this));
 
         // 添加打开阅读历史的命令
@@ -85,9 +73,9 @@ export default class FoliatePlugin extends Plugin {
             },
         });
 
-        // 注意：不在布局就绪时自动切换左侧 tab，仅在阅读器加载时（EpubViewer）检测并更新已存在的 TOC 视图。
+        // 注意：不在布局就绪时自动切换左侧 tab，仅在阅读器加载时（FoliateView）检测并更新已存在的 TOC 视图。
 
-        // 监听文件被重命名/移动，若为 epub 且在 data.json 有记录，则更新路径与文件名
+        // epub 文件被重命名/移动时，更新在 data.json 的记录
         this.registerEvent(
             this.app.vault.on('rename', async (file, oldPath) => {
                 if (!(file instanceof TFile) || file.extension !== 'epub')
@@ -228,7 +216,7 @@ export default class FoliatePlugin extends Plugin {
         const existingLeaf = this.app.workspace
             .getLeavesOfType(EPUB_VIEW_TYPE)
             .find((leaf) => {
-                const view = leaf.view as EpubReaderView;
+                const view = leaf.view as EpubView;
                 return view && view.file?.path === file.path;
             });
 
@@ -239,21 +227,7 @@ export default class FoliatePlugin extends Plugin {
         }
 
         // 创建新的叶子节点并打开视图
-        const leaf = this.app.workspace.getLeaf('tab');
-
-        // 设置叶子节点的视图类型
-        await leaf.setViewState({
-            type: EPUB_VIEW_TYPE,
-            active: true,
-        });
-
-        // 获取创建的视图并设置文件信息
-        // const view = leaf.view as EpubReaderView;
-        // if (view && view.setFileInfo) {
-        //     view.setFileInfo({ filePath: file.path, fileName: file.name });
-        // } else {
-        //     console.error(t('viewCreationFailed'));
-        // }
+        this.app.workspace.getLeaf('tab').openFile(file);
     }
 
     // 打开阅读历史页面

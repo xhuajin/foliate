@@ -38,7 +38,7 @@ import { useExcerpts } from '../hooks/useExcerpts';
 import { useTocSync } from '../hooks/useTocSync';
 import { useRenderSection } from '../hooks/useRenderSection';
 import { useSectionNav } from '../hooks/useSectionNav';
-import { EPUB_VIEW_TYPE, EpubReaderView } from './EpubReaderView';
+import { EPUB_VIEW_TYPE, EpubView } from './EpubView';
 import { ShareStyle, useShareSelection } from '../hooks/useShareSelection';
 import { cn } from '@/lib/utils';
 import { t } from '@/lang/helpers';
@@ -46,13 +46,13 @@ import { normalizeAuthor } from '@/lib/metadata';
 import { EpubMetadata, EpubType } from '@/types';
 import { ZipEntry } from 'foliate-js/vendor/zip.js';
 
-interface EpubViewerProps {
+interface FoliateViewProps {
     file: TFile;
     app: App; // 添加 app 参数以访问 Obsidian API
     plugin: FoliatePlugin; // 添加插件实例
 }
 
-const EpubViewer: React.FC<EpubViewerProps> = ({
+const FoliateView: React.FC<FoliateViewProps> = ({
     file,
     app, // 接收 app 参数
     plugin, // 接收插件实例
@@ -178,17 +178,9 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
                 injectedFontRef.current = false;
 
                 // 使用静态导入的 EPUB
-
-                // 使用 Obsidian API 读取文件
-
-                // 获取 TFile 实例
-                // const tfile = app.vault.getFileByPath(filePath);
-
                 if (!file) {
                     throw new Error(`${t('file')} ${t('notFound')}`);
                 }
-
-                console.log('open file: ', file);
                 // 使用 vault.readBinary 读取二进制文件
                 const arrayBuffer = await app.vault.readBinary(file);
                 // 创建 ZIP loader（EPUB 文件是 ZIP 格式）
@@ -475,7 +467,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
             const existingLeaf = app.workspace
                 .getLeavesOfType(EPUB_VIEW_TYPE)
                 .find((leaf) => {
-                    const view = leaf.view as EpubReaderView;
+                    const view = leaf.view as EpubView;
                     return view && view.file?.path === file.path;
                 });
 
@@ -977,7 +969,7 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
         if (!viewerRef.current) return;
 
         const readerContainer =
-            app.workspace.getActiveViewOfType(EpubReaderView)?.containerEl;
+            app.workspace.getActiveViewOfType(EpubView)?.containerEl;
         if (!readerContainer) return;
 
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -1531,4 +1523,4 @@ const EpubViewer: React.FC<EpubViewerProps> = ({
     );
 };
 
-export default EpubViewer;
+export default FoliateView;
