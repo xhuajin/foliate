@@ -1,5 +1,9 @@
 import { Plugin, TFile, WorkspaceLeaf } from 'obsidian';
-import { EpubView, EPUB_VIEW_TYPE } from './view/EpubView.tsx';
+import {
+    EpubView,
+    EPUB_VIEW_TYPE,
+    EPUB_FILE_EXTENSION,
+} from './view/EpubView.tsx';
 import {
     ReadingHistoryView,
     READING_HISTORY_VIEW_TYPE,
@@ -18,10 +22,12 @@ export default class FoliatePlugin extends Plugin {
         await this.loadSettings();
 
         // 注册 EPUB 阅读器视图
-        this.registerView(
-            EPUB_VIEW_TYPE,
-            (leaf: WorkspaceLeaf) => new EpubView(leaf, this)
-        );
+        this.registerView(EPUB_VIEW_TYPE, (leaf: WorkspaceLeaf) => {
+            return new EpubView(leaf, this);
+        });
+
+        // 注册 EPUB 文件扩展名处理器 - 左键点击时直接打开
+        this.registerExtensions([EPUB_FILE_EXTENSION], EPUB_VIEW_TYPE);
 
         // 注册 EPUB 目录视图
         this.registerView(EPUB_TOC_VIEW_TYPE, (leaf) => {
@@ -32,9 +38,6 @@ export default class FoliatePlugin extends Plugin {
         this.registerView(READING_HISTORY_VIEW_TYPE, (leaf) => {
             return new ReadingHistoryView(leaf, this);
         });
-
-        // 注册 EPUB 文件扩展名处理器 - 左键点击时直接打开
-        this.registerExtensions(['epub'], EPUB_VIEW_TYPE);
 
         // 注册文件菜单处理程序 - 右键点击 .epub 文件时显示选项（保留作为备用）
         this.registerEvent(

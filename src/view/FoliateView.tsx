@@ -43,7 +43,7 @@ import { ShareStyle, useShareSelection } from '../hooks/useShareSelection';
 import { cn } from '@/lib/utils';
 import { t } from '@/lang/helpers';
 import { normalizeAuthor } from '@/lib/metadata';
-import { EpubMetadata, EpubType } from '@/types';
+import { EpubMetadata, EpubType, EpubTocItem } from '@/types';
 import { ZipEntry } from 'foliate-js/vendor/zip.js';
 
 interface FoliateViewProps {
@@ -307,22 +307,8 @@ const FoliateView: React.FC<FoliateViewProps> = ({
         plugin.settings.preferBookFont
     );
 
-    // 在每次章节渲染后，抽取 h2.head 作为章节标题，并建立可见性监听
-    const updateHeadingTracking = React.useCallback(() => {
-        const getScrollRoot = (startEl: Element | null): Element | null => {
-            let el: Element | null = startEl as Element | null;
-            while (el && el !== document.documentElement) {
-                const style = window.getComputedStyle(el as Element);
-                const overflowY = style.overflowY;
-                const canScrollY =
-                    (overflowY === 'auto' || overflowY === 'scroll') &&
-                    (el as HTMLElement).scrollHeight >
-                        (el as HTMLElement).clientHeight;
-                if (canScrollY) return el;
-                el = el.parentElement;
-            }
-            return null; // 回退到视口
-        };
+    // 在每次章节渲染后，更新章节标题，并建立可见性监听
+    const updateHeadingTracking = React.useCallback((index: number) => {
         // 清理之前的观察器
         if (headObserverRef.current) {
             headObserverRef.current.disconnect();
@@ -339,17 +325,27 @@ const FoliateView: React.FC<FoliateViewProps> = ({
             return;
         }
 
-        const headEl = container.querySelector('h2.head');
+        const tocTitle = getSectionTitleFromToc(index);
+        if (tocTitle) {
+            setSectionTitle(tocTitle);
+            setIsHeadVisible(false); // TOC 标题始终显示在顶部
+        }
+
+        const headEl =
+            container.querySelector('h2') ||
+            container.querySelector('h3') ||
+            container.querySelector('.epub-reader-content > div > *');
         observedHeadElRef.current = headEl;
 
         if (headEl) {
             const text = (headEl.textContent || '').trim();
-            setSectionTitle(text);
+            // 只有在 TOC 中没有找到标题时才使用 DOM 标题作为备选
+            if (!sectionTitle) {
+                setSectionTitle(text);
+            }
 
-            // 寻找就近可滚动祖先作为观察根（root）
-            const rootEl =
-                getScrollRoot(headEl) || getScrollRoot(container) || null;
-
+            // 滚动元素
+            const rootEl = scrollToTopRef.current;
             // 先同步计算一次初始可见性，降低闪烁
             try {
                 const headRect = headEl.getBoundingClientRect();
@@ -393,17 +389,67 @@ const FoliateView: React.FC<FoliateViewProps> = ({
             observer.observe(headEl);
             headObserverRef.current = observer;
         } else {
-            // 未找到章节内标题，回退为显示头部并使用书名/文件名
-            setSectionTitle('');
+            // 未找到章节内标题，始终显示不隐藏
+            // setSectionTitle('');
             setIsHeadVisible(false);
         }
     }, []);
+
+    // 从 TOC 获取章节标题的辅助函数
+    const getSectionTitleFromToc = React.useCallback(
+        (sectionIndex: number): string => {
+            if (!book?.sections || !book?.toc || sectionIndex < 0) return '';
+
+            const currentSection = book.sections[sectionIndex];
+            if (!currentSection) return '';
+
+            // 辅助函数：去除 URL 参数和锚点
+            const stripFragmentAndQuery = (href?: string): string => {
+                if (!href) return '';
+                return href.split(/[?#]/)[0] || '';
+            };
+
+            // 标准化 href
+            const normalizeHref = (href?: string): string => {
+                const base = stripFragmentAndQuery(href);
+                return base.replace(/^\.\//, '');
+            };
+
+            // 检查 href 是否匹配
+            const hrefMatches = (a?: string, b?: string): boolean => {
+                const na = normalizeHref(a);
+                const nb = normalizeHref(b);
+                if (!na || !nb) return false;
+                return na === nb || na.endsWith(nb) || nb.endsWith(na);
+            };
+
+            // 递归查找匹配的 TOC 项
+            const findMatchingTocItem = (
+                tocItems: EpubTocItem[]
+            ): EpubTocItem | null => {
+                for (const item of tocItems) {
+                    if (hrefMatches(item.href, currentSection.id)) {
+                        return item;
+                    }
+                    if (item.subitems) {
+                        const found = findMatchingTocItem(item.subitems);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            };
+
+            const matchingItem = findMatchingTocItem(book.toc);
+            return matchingItem?.label?.trim() || '';
+        },
+        [book]
+    );
 
     // 包装 renderSection：渲染后刷新标题与可见性跟踪
     const renderSectionWithUpdate = React.useCallback(
         async (index: number) => {
             await renderSection(index);
-            updateHeadingTracking();
+            updateHeadingTracking(index);
         },
         [renderSection, updateHeadingTracking]
     );
@@ -418,6 +464,17 @@ const FoliateView: React.FC<FoliateViewProps> = ({
         saveProgress,
         setCurrentSectionIndex
     );
+
+    // 当章节索引变化时，更新章节标题
+    useEffect(() => {
+        if (book && currentSectionIndex >= 0) {
+            const tocTitle = getSectionTitleFromToc(currentSectionIndex);
+            if (tocTitle) {
+                setSectionTitle(tocTitle);
+                setIsHeadVisible(false); // TOC 标题始终显示在顶部
+            }
+        }
+    }, [book, currentSectionIndex, getSectionTitleFromToc]);
 
     // 本地 renderSection 已由 useRenderSection 提供
 

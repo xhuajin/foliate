@@ -11,24 +11,13 @@ export class EpubView extends FileView {
     private root: Root | null = null;
     public plugin: FoliatePlugin;
     private isClosing: boolean = false;
+    override allowNoFile: boolean = true;
     override navigation: boolean = true;
 
     constructor(leaf: WorkspaceLeaf, plugin: FoliatePlugin) {
         super(leaf);
         this.plugin = plugin;
         this.app = plugin.app;
-    }
-
-    private renderComponent(): void {
-        if (!this.root || !this.file) return;
-        // 渲染 Editor 组件
-        this.root.render(
-            React.createElement(FoliateView, {
-                file: this.file,
-                app: this.app,
-                plugin: this.plugin,
-            })
-        );
     }
 
     getViewType(): string {
@@ -47,39 +36,42 @@ export class EpubView extends FileView {
         return 'book-open';
     }
 
+    override getState() {
+        const state = super.getState();
+        return {
+            ...state,
+            file: this.file?.path || null,
+        };
+    }
     // 处理视图状态变化
+    // state 存储的 file 只能是 file path string
     override async setState(
-        state: { file?: TFile | null },
+        state: { file?: string | null },
         result: ViewStateResult
     ): Promise<void> {
         // 如果传入的state包含空文件路径，但我们已经有文件信息，就不要覆盖
-        if (state && state.file && state.file.extension === 'epub') {
-            this.file = state.file || this.file;
-
-            // 如果组件已经渲染，重新渲染
-            if (this.root) {
-                this.renderComponent();
+        if (state && state.file) {
+            const file = this.app.vault.getAbstractFileByPath(state.file);
+            if (
+                file &&
+                file instanceof TFile &&
+                file.extension === EPUB_FILE_EXTENSION
+            ) {
+                // 如果组件已经渲染，重新渲染
+                await this.renderComponent(file);
             }
         }
 
         return super.setState(state, result);
     }
 
-    override getState() {
-        const state = super.getState();
-        return {
-            ...state,
-            file: this.file,
-        };
+    override async onOpen(): Promise<void> {
+        this.isClosing = false;
+        this.root = createRoot(this.contentEl as HTMLElement);
     }
 
     override async onLoadFile(file: TFile): Promise<void> {
-        this.file = file;
-        this.contentEl.empty();
-        // 创建 React 根容器
-        this.root = createRoot(this.contentEl as HTMLElement);
-        // 渲染 React 组件 - 使用 React.createElement 语法
-        this.renderComponent();
+        await this.renderComponent(file);
     }
 
     override async onClose(): Promise<void> {
@@ -98,29 +90,16 @@ export class EpubView extends FileView {
         return extension == EPUB_FILE_EXTENSION;
     }
 
-    override async onunload(): Promise<void> {
-        // 防止重复调用
-        if (this.isClosing) return;
-        this.isClosing = true;
-
-        // 清理 React 组件
-        if (this.root) {
-            this.root.unmount();
-            this.root = null;
-        }
+    private async renderComponent(file: TFile): Promise<void> {
+        this.file = file;
+        if (!this.root) return;
+        // 渲染 Editor 组件
+        this.root.render(
+            React.createElement(FoliateView, {
+                file: this.file,
+                app: this.app,
+                plugin: this.plugin,
+            })
+        );
     }
-
-    // private handleClose(): void {
-    //     // 防止重复调用
-    //     if (this.isClosing) return;
-    //     this.isClosing = true;
-
-    //     // 先清理 React 组件，然后关闭视图
-    //     if (this.root) {
-    //         this.root.unmount();
-    //         this.root = null;
-    //     }
-    //     // 关闭当前视图
-    //     this.leaf.detach();
-    // }
 }
