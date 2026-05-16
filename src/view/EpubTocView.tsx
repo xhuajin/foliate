@@ -1,15 +1,12 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
 import { createRoot, Root } from 'react-dom/client';
-import { createElement, useEffect, useMemo } from 'react';
+import { createElement, useEffect, useMemo, useRef } from 'react';
 import type FoliatePlugin from '../main';
 
 import { useTree } from '@headless-tree/react';
 import { Tree, TreeItem, TreeItemLabel } from '../components/ui/tree';
-import {
-    hotkeysCoreFeature,
-    syncDataLoaderFeature,
-    expandAllFeature,
-} from '@headless-tree/core';
+import { hotkeysCoreFeature, syncDataLoaderFeature, expandAllFeature } from '@headless-tree/core';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { cn } from '../lib/utils';
 import { t } from '@/lang/helpers';
 import { ChevronsDownUp, ChevronsUpDown, Focus } from 'lucide-react';
@@ -37,22 +34,10 @@ interface EpubTocProps {
     plugin: FoliatePlugin;
 }
 
-// TOC 组件属性
-interface EpubTocProps {
-    book: EpubType;
-    currentSectionIndex: number;
-    onSectionSelect: (sectionIndex: number) => void;
-    plugin: FoliatePlugin;
-}
-
 // React TOC 组件
-const EpubToc: React.FC<EpubTocProps> = ({
-    book,
-    tocItems,
-    currentSectionIndex,
-    onSectionSelect,
-}) => {
+const EpubToc: React.FC<EpubTocProps> = ({ book, tocItems, currentSectionIndex, onSectionSelect }) => {
     const indent = 20;
+    const parentRef = useRef<HTMLDivElement | null>(null);
 
     // 统一处理 href 的工具方法：去掉 hash/query，并规范化相对前缀
     const stripFragmentAndQuery = (href?: string): string => {
@@ -83,29 +68,8 @@ const EpubToc: React.FC<EpubTocProps> = ({
         if (!currentSection) return null;
 
         // 通过 id 匹配找到对应的TOC项
-        return (
-            Object.values(tocItems).find((tocItem: TocItem) =>
-                hrefMatches(tocItem.id, currentSection.id)
-            ) || null
-        );
+        return Object.values(tocItems).find((tocItem: TocItem) => hrefMatches(tocItem.id, currentSection.id)) || null;
     }, [book, tocItems, currentSectionIndex]);
-
-    // 自动滚动到当前项
-    useEffect(() => {
-        if (currentTocItem) {
-            // 使用 setTimeout 确保 DOM 已更新
-            setTimeout(() => {
-                const currentElement =
-                    document.querySelector('.current-toc-item');
-                if (currentElement) {
-                    currentElement.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center',
-                    });
-                }
-            }, 100);
-        }
-    }, [currentTocItem, currentSectionIndex]);
 
     if (!book) {
         return (
@@ -167,10 +131,7 @@ const EpubToc: React.FC<EpubTocProps> = ({
         const expandedItems = pathToRoot.slice(0, -1);
 
         // 如果当前项有子项，也展开它
-        if (
-            currentTocItem.childrenIds &&
-            currentTocItem.childrenIds.length > 0
-        ) {
+        if (currentTocItem.childrenIds && currentTocItem.childrenIds.length > 0) {
             expandedItems.push(currentTocItem.id);
         }
 
@@ -183,9 +144,7 @@ const EpubToc: React.FC<EpubTocProps> = ({
             const targetId = normalizeHref(tocItem.id);
 
             // 尝试找到对应的章节索引（考虑 href/id/src 与 endsWith 退化匹配）
-            const sectionIndex = book.sections.findIndex(
-                (section: EpubSection) => hrefMatches(section.id, targetId)
-            );
+            const sectionIndex = book.sections.findIndex((section: EpubSection) => hrefMatches(section.id, targetId));
 
             if (sectionIndex >= 0) {
                 onSectionSelect(sectionIndex);
@@ -202,8 +161,7 @@ const EpubToc: React.FC<EpubTocProps> = ({
         indent,
         rootItemId: 'root',
         getItemName: (item) => item.getItemData().label || t('unnamedChapter'),
-        isItemFolder: (item) =>
-            (item.getItemData()?.childrenIds?.length ?? 0) > 0,
+        isItemFolder: (item) => (item.getItemData()?.childrenIds?.length ?? 0) > 0,
         dataLoader: {
             // 返回安全的兜底，避免 undefined 触发 Headless Tree 报错
             getItem: (itemId) =>
@@ -218,6 +176,28 @@ const EpubToc: React.FC<EpubTocProps> = ({
         },
         features: [syncDataLoaderFeature, hotkeysCoreFeature, expandAllFeature],
     });
+
+    const visibleItems = tree.getItems();
+
+    const rowVirtualizer = useVirtualizer({
+        count: visibleItems.length,
+        getScrollElement: () => parentRef.current,
+        estimateSize: () => 28,
+        overscan: 8,
+    });
+
+    const scrollToCurrent = (align: 'center' | 'auto' = 'center') => {
+        if (!currentTocItem) return;
+        const index = tree.getItems().findIndex((item) => item.getItemData().id === currentTocItem.id);
+        if (index >= 0) {
+            rowVirtualizer.scrollToIndex(index, { align });
+        }
+    };
+
+    useEffect(() => {
+        if (!currentTocItem) return;
+        scrollToCurrent('center');
+    }, [currentTocItem, currentSectionIndex, rowVirtualizer, tree]);
 
     return (
         <div className="epub-toc-container">
@@ -249,22 +229,12 @@ const EpubToc: React.FC<EpubTocProps> = ({
                             const expandedItems = pathToRoot.slice(0, -1); // 不包括当前项本身
 
                             // 更新展开状态
-                            tree.applySubStateUpdate(
-                                'expandedItems',
-                                expandedItems
-                            );
+                            tree.applySubStateUpdate('expandedItems', expandedItems);
                             tree.rebuildTree();
 
                             // 等待DOM更新后再滚动
                             setTimeout(() => {
-                                const currentElement =
-                                    document.querySelector('.current-toc-item');
-                                if (currentElement) {
-                                    currentElement.scrollIntoView({
-                                        behavior: 'smooth',
-                                        block: 'center',
-                                    });
-                                }
+                                scrollToCurrent('center');
                             }, 150); // 增加延迟确保DOM重建完成
                         }
                     }}
@@ -274,49 +244,56 @@ const EpubToc: React.FC<EpubTocProps> = ({
                 </div>
             </div>
 
-            <div className="toc-content">
-                <Tree
-                    className="relative before:absolute before:inset-0 before:-ms-1 "
-                    indent={indent}
-                    tree={tree}
-                >
-                    {tree.getItems().map((item) => {
-                        const itemData = item.getItemData();
-                        const isCurrentItem =
-                            currentTocItem && currentTocItem.id === itemData.id;
+            <div className="toc-content" ref={parentRef}>
+                <Tree className="relative before:absolute before:inset-0 before:-ms-1 " indent={indent} tree={tree}>
+                    <div
+                        style={{
+                            height: `${rowVirtualizer.getTotalSize()}px`,
+                            position: 'relative',
+                        }}
+                    >
+                        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                            const item = visibleItems[virtualRow.index];
+                            if (!item) return null;
 
-                        return (
-                            <TreeItem
-                                key={item.getId()}
-                                item={item}
-                                className={
-                                    isCurrentItem
-                                        ? 'current-toc-item'
-                                        : undefined
-                                }
-                            >
-                                <TreeItemLabel
-                                    className={cn(
-                                        'text-(--nav-item-color)',
-                                        'hover:bg-(--nav-item-background-hover) hover:text-(--nav-item-color-hover) transition-all duration-150',
-                                        'before:bg-background relative before:absolute before:inset-x-0 before:-inset-y-0.5 before:-z-10 cursor-pointer',
-                                        'py-[3px]',
-                                        isCurrentItem
-                                            ? 'bg-(--nav-item-background-active) text-(--nav-item-color-highlighted) hover:text-(--nav-item-color-highlighted)'
-                                            : ''
-                                    )}
-                                    onClick={() => handleTocItemClick(itemData)}
-                                />
-                            </TreeItem>
-                        );
-                    })}
+                            const itemData = item.getItemData();
+                            const isCurrentItem = currentTocItem && currentTocItem.id === itemData.id;
+
+                            return (
+                                <TreeItem
+                                    key={item.getId()}
+                                    item={item}
+                                    style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        width: '100%',
+                                        transform: `translateY(${virtualRow.start}px)`,
+                                    }}
+                                    className={isCurrentItem ? 'current-toc-item' : undefined}
+                                >
+                                    <TreeItemLabel
+                                        className={cn(
+                                            'text-(--nav-item-color)',
+                                            'hover:bg-(--nav-item-background-hover) hover:text-(--nav-item-color-hover) transition-all duration-150',
+                                            'before:bg-background relative before:absolute before:inset-x-0 before:-inset-y-0.5 before:-z-10 cursor-pointer',
+                                            'py-[3px]',
+                                            isCurrentItem
+                                                ? 'bg-(--nav-item-background-active) text-(--nav-item-color-highlighted) hover:text-(--nav-item-color-highlighted)'
+                                                : ''
+                                        )}
+                                        onClick={() => handleTocItemClick(itemData)}
+                                    />
+                                </TreeItem>
+                            );
+                        })}
+                    </div>
                 </Tree>
             </div>
             <div className="toc-footer">
                 {book?.sections && (
                     <p>
-                        {t('current')}: {currentSectionIndex + 1} /{' '}
-                        {book.sections.length}
+                        {t('current')}: {currentSectionIndex + 1} / {book.sections.length}
                     </p>
                 )}
             </div>
@@ -350,11 +327,7 @@ export class EpubTocView extends ItemView {
     }
 
     // 设置书籍数据和回调
-    setBookData(
-        book: EpubType,
-        currentSectionIndex: number,
-        onSectionSelect: (sectionIndex: number) => void
-    ): void {
+    setBookData(book: EpubType, currentSectionIndex: number, onSectionSelect: (sectionIndex: number) => void): void {
         this.book = book;
         this.currentSectionIndex = currentSectionIndex;
         this.onSectionSelect = onSectionSelect;
@@ -381,16 +354,9 @@ export class EpubTocView extends ItemView {
             const flatItems: Record<string, TocItem> = {};
             const rootChildren: string[] = [];
 
-            const processTocItem = (
-                item: EpubTocItem,
-                level = 0,
-                parentId?: string
-            ): string => {
+            const processTocItem = (item: EpubTocItem, level = 0, parentId?: string): string => {
                 // 使用 href 或 label 作为 ID，确保唯一性
-                const id =
-                    item.href ||
-                    item.label ||
-                    Math.random().toString(36).substr(2, 9);
+                const id = item.href || item.label || Math.random().toString(36).substr(2, 9);
 
                 // 先处理子项，获取子项ID列表
                 const childIds: string[] = [];
@@ -444,10 +410,7 @@ export class EpubTocView extends ItemView {
         }
 
         const key =
-            this.book?.metadata?.identifier ||
-            this.book?.metadata?.title ||
-            this.book?.sections?.[0]?.id ||
-            'toc';
+            this.book?.metadata?.identifier || this.book?.metadata?.title || this.book?.sections?.[0]?.id || 'toc';
 
         this.root.render(
             createElement(EpubToc, {
