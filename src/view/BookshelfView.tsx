@@ -1,33 +1,49 @@
-import { ItemView, WorkspaceLeaf, TFile, Notice } from 'obsidian';
+import { ItemView, WorkspaceLeaf, TFile, Notice, Menu } from 'obsidian';
 import { createRoot, Root } from 'react-dom/client';
 import * as React from 'react';
 import type FoliatePlugin from '../main';
-import { BentoGrid, ReadingBentoCard } from '../components/ui/bento-grid';
-import { CoverFlow, type CoverFlowItem } from '../components/ui/coverflow';
-import {
-    Tabs,
-    TabsContent,
-    TabsList,
-    TabsTrigger,
-} from '../components/ui/tabs';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { BringToFront, LayoutPanelLeft } from 'lucide-react';
+// import { BentoGrid, ReadingBentoCard } from '../components/ui/bento-grid';
+import { CoverFlow, type CoverFlowItem } from '../components/bookshelf/coverflow';
+// import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+// import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+// import { BringToFront, LayoutPanelLeft } from 'lucide-react';
 import { t } from '@/lang/helpers';
 import { EpubReadingProgress } from '@/types';
+import { Grid } from '@/components/bookshelf/grid';
+import { useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
-export const READING_HISTORY_VIEW_TYPE = 'reading-history-view';
+export const BOOKSHELF_VIEW_TYPE = 'bookshelf-view';
 
-interface ReadingHistoryProps {
+interface BookshelfProps {
     plugin: FoliatePlugin;
     onOpenBook: (filePath: string) => void;
 }
 
-const ReadingHistory: React.FC<ReadingHistoryProps> = ({
-    plugin,
-    onOpenBook,
-}) => {
+const Bookshelf: React.FC<BookshelfProps> = ({ plugin, onOpenBook }) => {
     const recentBooks = plugin.getRecentBooks();
-    const [activeTab, setActiveTab] = React.useState('coverflow');
+    // const [activeTab, setActiveTab] = React.useState('coverflow');
+    // const [view, setView] = useState<'grid' | 'cover'>('grid');
+    const bookshelfType = plugin.settings.bookshelfType || 'grid';
+    const direction = bookshelfType === 'grid' ? -1 : 1;
+
+    const variants = {
+        enter: (direction: number) => ({
+            x: direction > 0 ? '100%' : '-100%',
+            opacity: 1,
+        }),
+
+        center: {
+            x: 0,
+            opacity: 1,
+        },
+
+        exit: (direction: number) => ({
+            x: direction > 0 ? '-100%' : '100%',
+            opacity: 1,
+        }),
+    };
 
     const formatLastRead = (timestamp: number) => {
         const date = new Date(timestamp);
@@ -42,11 +58,8 @@ const ReadingHistory: React.FC<ReadingHistoryProps> = ({
         } else if (diffDays < 7) {
             return `${diffDays}${t('daysAgo_suffix')}`;
         } else {
-            const lang = (
-                localStorage.getItem('language') || 'en'
-            ).toLowerCase();
-            const localeStr =
-                lang === 'zh' || lang === 'zh-cn' ? 'zh-CN' : 'en-US';
+            const lang = (localStorage.getItem('language') || 'en').toLowerCase();
+            const localeStr = lang === 'zh' || lang === 'zh-cn' ? 'zh-CN' : 'en-US';
             return date.toLocaleDateString(localeStr);
         }
     };
@@ -56,9 +69,7 @@ const ReadingHistory: React.FC<ReadingHistoryProps> = ({
         return Math.round(((book.sectionIndex + 1) / book.totalSections) * 100);
     };
 
-    const getBookStatus = (
-        book: EpubReadingProgress
-    ): 'reading' | 'completed' | 'not-started' => {
+    const getBookStatus = (book: EpubReadingProgress): 'reading' | 'completed' | 'not-started' => {
         const progress = getProgressPercentage(book);
         if (progress === 100) return 'completed';
         if (progress > 0) return 'reading';
@@ -87,8 +98,7 @@ const ReadingHistory: React.FC<ReadingHistoryProps> = ({
                   }),
                   // 统一 publisher 优先级：publisher > published
                   ...((book.metadata.publisher || book.metadata.published) && {
-                      publisher:
-                          book.metadata.publisher || book.metadata.published,
+                      publisher: book.metadata.publisher || book.metadata.published,
                   }),
                   ...(book.metadata.subject && {
                       subject: book.metadata.subject,
@@ -103,9 +113,9 @@ const ReadingHistory: React.FC<ReadingHistoryProps> = ({
 
     if (recentBooks.length === 0) {
         return (
-            <div className="reading-history-container">
-                <div className="reading-history-header">
-                    <h1>{t('myReadingHistory')}</h1>
+            <div className="bookshelf-container">
+                <div className="bookshelf-header">
+                    <h1>{t('myBookshelf')}</h1>
                     <p>{t('noReadingRecord')}</p>
                 </div>
                 <div className="empty-state">
@@ -118,9 +128,36 @@ const ReadingHistory: React.FC<ReadingHistoryProps> = ({
     }
 
     return (
-        <div className="reading-history-container">
+        <div
+            className={cn(
+                'bookshelf-container relative w-full px-0 pt-4',
+                bookshelfType === 'grid' ? 'overflow-y-scroll' : ''
+            )}
+        >
+            <AnimatePresence mode="sync" initial={false} custom={direction}>
+                <motion.div
+                    key={plugin.settings.bookshelfType}
+                    custom={direction}
+                    variants={variants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{
+                        duration: 0.2,
+                        ease: 'easeInOut',
+                    }}
+                    className="absolute inset-0"
+                >
+                    {plugin.settings.bookshelfType === 'grid' ? (
+                        <Grid items={coverflowItems} />
+                    ) : (
+                        <CoverFlow items={coverflowItems} />
+                    )}
+                </motion.div>
+            </AnimatePresence>
+
             {/* Tab 切换 */}
-            <Tabs
+            {/* <Tabs
                 value={activeTab}
                 onValueChange={setActiveTab}
                 className="w-full h-full"
@@ -153,12 +190,10 @@ const ReadingHistory: React.FC<ReadingHistoryProps> = ({
                     <ScrollBar orientation="horizontal" />
                 </ScrollArea>
 
-                {/* CoverFlow 视图 */}
                 <TabsContent value="coverflow" className="space-y-4">
                     <CoverFlow items={coverflowItems} />
                 </TabsContent>
 
-                {/* 网格视图 */}
                 <TabsContent value="grid" className="space-y-4">
                     <BentoGrid className="grid-cols-4 auto-rows-[280px]">
                         {recentBooks.map((book, index) => (
@@ -190,26 +225,36 @@ const ReadingHistory: React.FC<ReadingHistoryProps> = ({
                         ))}
                     </BentoGrid>
                 </TabsContent>
-            </Tabs>
+            </Tabs> */}
         </div>
     );
 };
 
-export class ReadingHistoryView extends ItemView {
+export class BookshelfView extends ItemView {
     private root: Root | null = null;
     private plugin: FoliatePlugin;
+    override navigation = false;
+
+    public bookShelfType: string;
 
     constructor(leaf: WorkspaceLeaf, plugin: FoliatePlugin) {
         super(leaf);
         this.plugin = plugin;
+        this.bookShelfType = plugin.settings.bookshelfType || 'grid';
+        this.addAction('arrow-left-right', t('toggleBookshelfType'), () => {
+            this.bookShelfType = this.bookShelfType === 'grid' ? 'cover' : 'grid';
+            this.plugin.settings.bookshelfType = this.bookShelfType as 'grid' | 'cover';
+            // this.plugin.saveSettings();
+            this.renderComponent();
+        });
     }
 
     getViewType(): string {
-        return READING_HISTORY_VIEW_TYPE;
+        return BOOKSHELF_VIEW_TYPE;
     }
 
     getDisplayText(): string {
-        return t('readingHistory');
+        return t('bookshelf');
     }
 
     override getIcon(): string {
@@ -226,15 +271,33 @@ export class ReadingHistoryView extends ItemView {
         this.renderComponent();
     }
 
+    // override onPaneMenu(menu: Menu, source: 'more-options' | 'tab-header' | string) {
+    //     if (source === 'more-options') {
+    //         // 用于切换 bookshelf type: grid <-> cover
+    //         // 添加切换选项
+    //         menu.addItem((item) => {
+    //             item.setTitle(this.bookShelfType === 'grid' ? t('switchToCoverFlow') : t('switchToGrid'))
+    //                 .setIcon('layout')
+    //                 .onClick(() => {
+    //                     this.bookShelfType = this.bookShelfType === 'grid' ? 'cover' : 'grid';
+    //                     this.plugin.settings.bookshelfType = this.bookShelfType as 'grid' | 'cover';
+    //                     this.plugin.saveSettings();
+    //                     this.renderComponent();
+    //                 });
+    //         });
+    //     }
+    //     return super.onPaneMenu(menu, source);
+    // }
+
     private renderComponent(): void {
         if (!this.root) return;
 
-        this.root.render(
-            React.createElement(ReadingHistory, {
-                plugin: this.plugin,
-                onOpenBook: this.handleOpenBook.bind(this),
-            })
-        );
+        const bookShelfView = React.createElement(Bookshelf, {
+            plugin: this.plugin,
+            onOpenBook: this.handleOpenBook.bind(this),
+        });
+
+        this.root.render(bookShelfView);
     }
 
     private async handleOpenBook(filePath: string): Promise<void> {

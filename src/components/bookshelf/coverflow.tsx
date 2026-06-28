@@ -1,8 +1,10 @@
-import * as React from 'react';
-import { motion } from 'framer-motion';
+// import * as React from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '../../lib/utils';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from './button';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Button } from '../ui/button';
+import { Progress } from '../ui/progress';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface CoverFlowItem {
     id: string;
@@ -52,25 +54,9 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
     showNav = true,
     showDots = false,
 }) => {
-    const [activeIndex, setActiveIndex] = React.useState(0);
-
-    // const getStatusIcon = (status: string) => {
-    //     switch (status) {
-    //         case 'completed':
-    //             return '✅';
-    //         case 'reading':
-    //             return '📖';
-    //         default:
-    //             return '📚';
-    //     }
-    // };
-
-    const getProgressColor = (progress: number) => {
-        if (progress >= 90) return 'bg-green-500';
-        if (progress >= 60) return 'bg-blue-500';
-        if (progress >= 30) return 'bg-yellow-500';
-        return 'bg-red-500';
-    };
+    const [activeIndex, setActiveIndex] = useState(0);
+    const lastWheelSwitchRef = useRef(0);
+    const [expandBook, setExpandBook] = useState<number | null>(null);
 
     const handlePrevious = () => {
         setActiveIndex((prev) => (prev - 1 + items.length) % items.length);
@@ -80,7 +66,30 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
         setActiveIndex((prev) => (prev + 1) % items.length);
     };
 
-    const handleKeyDown = React.useCallback(
+    const handleWheel = useCallback(
+        (event: React.WheelEvent<HTMLDivElement>) => {
+            if (items.length <= 1) return;
+
+            const dominantDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+            if (Math.abs(dominantDelta) < 12) return;
+
+            const now = Date.now();
+            if (now - lastWheelSwitchRef.current < 250) return;
+
+            lastWheelSwitchRef.current = now;
+
+            if (dominantDelta > 0 && activeIndex < items.length - 1) {
+                handleNext();
+            } else if (dominantDelta < 0 && activeIndex > 0) {
+                handlePrevious();
+            }
+
+            return;
+        },
+        [items.length, activeIndex]
+    );
+
+    const handleKeyDown = useCallback(
         (event: KeyboardEvent) => {
             if (event.key === 'ArrowLeft') {
                 handlePrevious();
@@ -93,7 +102,7 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
         [activeIndex, items]
     );
 
-    React.useEffect(() => {
+    useEffect(() => {
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [handleKeyDown]);
@@ -117,17 +126,15 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
         // 旋转角度：参考 coverflow.js 的 (indexDiff*10 ± 45)，限制最大 75°
         const baseTilt = 60;
         const extra = Math.min(30, Math.max(0, (abs - 1) * 10));
-        const rotate = flat
-            ? 0
-            : (delta < 0 ? 1 : delta > 0 ? -1 : 0) * (baseTilt + extra);
+        const rotate = flat ? 0 : (delta < 0 ? 1 : delta > 0 ? -1 : 0) * (baseTilt + extra);
         // 轻微 X 轴倾斜增强透视观感（让形状更接近“梯形”）
         const rotateX = -2;
 
         // 深度：非激活项后推，越远越小；激活项略微前置
         const z = isActive ? 40 : flat ? -40 * abs : -80 - 60 * (abs - 1);
 
-        // 水平位移：按照 spacing 叠加
-        const x = spacing * delta;
+        // 水平位移：按照 spacing 叠加，并在非激活项的左侧增加额外偏移，避免左右不对称，手动测试需要偏移 30px
+        const x = spacing * delta - (delta < 0 ? 30 : 0);
 
         // 缩放：激活项突出
         const scale = isActive ? 1.08 : 1 - Math.min(0.15, abs * 0.08);
@@ -152,11 +159,9 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
 
     return (
         <div
-            className={cn(
-                'relative h-full overflow-hidden coverflow-container space-y-4',
-                className
-            )}
+            className={cn('relative flex flex-col h-full overflow-hidden coverflow-container gap-8', className)}
             onDragStart={(e) => e.preventDefault()}
+            onWheel={handleWheel}
         >
             {/* Cover Flow Cards */}
             <div className="relative h-80 w-full">
@@ -175,10 +180,7 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
                                     'absolute left-1/2 top-1/2 cursor-pointer transition-all duration-300 coverflow-card'
                                 )}
                                 style={{
-                                    transform: getCardTransform(
-                                        index,
-                                        activeIndex
-                                    ),
+                                    transform: getCardTransform(index, activeIndex),
                                     transformStyle: 'preserve-3d',
                                     filter: isActive
                                         ? undefined
@@ -189,7 +191,8 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
                                 }}
                                 onClick={() => {
                                     if (isActive) {
-                                        item.onClick?.();
+                                        // item.onClick?.();
+                                        setExpandBook(index);
                                     } else {
                                         setActiveIndex(index);
                                     }
@@ -198,19 +201,19 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
                             >
                                 <div
                                     className={cn(
-                                        'w-48 h-64 rounded-lg overflow-hidden shadow-xl',
-                                        'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
+                                        'w-48 h-64 rounded-lg overflow-hidden shadow-xl'
+                                        // 'border border-[var(--border)]'
                                     )}
                                 >
                                     {item.metadata?.coverUrl ? (
-                                        <img
+                                        <motion.img
+                                            layoutId={`cover-${item.id}`}
                                             src={item.metadata.coverUrl}
                                             alt={item.title}
                                             className="w-full h-full object-cover no-drag"
                                             draggable={false}
                                             onError={(e) => {
-                                                const target =
-                                                    e.target as HTMLImageElement;
+                                                const target = e.target as HTMLImageElement;
                                                 target.className += ' hidden';
                                             }}
                                         />
@@ -227,10 +230,10 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
             </div>
             {/* Controls bar under images: Left/Title+Author/Right */}
             {showNav && items.length > 0 && (
-                <div className="h-12 max-w-[50%] flex items-center justify-center gap-3 mx-auto">
+                <div className="flex items-center h-16 justify-center gap-3 mx-auto">
                     <Button
                         onClick={handlePrevious}
-                        className="p-2 border-0 shadow-none! hover:shadow-none! transition-colors"
+                        className="p-2 border-0 shadow-none! hover:shadow-none! transition-colors bg-transparent! cursor-pointer"
                         disabled={items.length <= 1}
                         aria-label="上一个"
                         variant={'ghost'}
@@ -239,14 +242,14 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
                         <ChevronLeft />
                     </Button>
 
-                    <div className="flex flex-col w-36 min-w-0 text-center truncate">
+                    <div className="flex flex-col w-36 min-w-96 mx-8 text-center truncate">
                         {items[activeIndex] && (
                             <>
-                                <div className="text-base font-medium text-gray-900 dark:text-white truncate">
+                                <div className="text-2xl font-medium leading-loose text-[var(--text-normal)] truncate">
                                     {items[activeIndex].title}
                                 </div>
                                 {items[activeIndex].author && (
-                                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                    <div className="text-gray-500 dark:text-gray-400 truncate">
                                         {items[activeIndex].author}
                                     </div>
                                 )}
@@ -256,7 +259,7 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
 
                     <Button
                         onClick={handleNext}
-                        className="p-2 border-0 shadow-none! hover:shadow-none! transition-colors"
+                        className="p-2 border-0 shadow-none! hover:shadow-none! transition-colors bg-transparent! cursor-pointer"
                         disabled={items.length <= 1}
                         aria-label="下一个"
                         variant={'ghost'}
@@ -268,34 +271,35 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
             )}
 
             {/* Bottom details panel (below control bar) */}
-            <div className="w-[40%] mx-auto">
+            <div className="w-full flex items-center justify-center">
                 {items[activeIndex] && (
-                    <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                            {items[activeIndex].metadata?.description && (
-                                <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-break-spaces select-text max-h-40 truncate">
-                                    {items[activeIndex].metadata.description}
-                                </p>
-                            )}
-                            {items[activeIndex].metadata?.subject && (
-                                <div className="relative h-96 overflow-hidden-wrap gap-1 mt-2">
-                                    {items[activeIndex].metadata?.subject.map(
-                                        (tag, idx) => (
+                    <div className="flex flex-col w-96 items-start justify-between gap-4">
+                        {items[activeIndex]?.metadata?.description && (
+                            <div className="flex-1 min-w-0">
+                                {items[activeIndex].metadata?.description && (
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-break-spaces select-text max-h-20 truncate">
+                                        {items[activeIndex].metadata.description}
+                                    </p>
+                                )}
+                                {items[activeIndex].metadata?.subject && (
+                                    <div className="relative h-96 overflow-hidden-wrap gap-1 mt-2">
+                                        {items[activeIndex].metadata?.subject.map((tag, idx) => (
                                             <span
                                                 key={idx}
                                                 className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full"
                                             >
                                                 {tag.trim()}
                                             </span>
-                                        )
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                        {/* <div className="ml-4 shrink-0 text-right">
-                            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                                {items[activeIndex].progress}%
+                                        ))}
+                                    </div>
+                                )}
                             </div>
+                        )}
+                        <div className="flex flex-col w-full gap-2 items-center justify-center">
+                            {/* <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                {items[activeIndex].progress}%
+                            </div> */}
+                            <Progress value={items[activeIndex].progress} />
                             <div className="text-sm text-gray-500 dark:text-gray-500">
                                 {items[activeIndex].lastRead}
                             </div>
@@ -305,7 +309,7 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
                             >
                                 继续阅读
                             </Button>
-                        </div> */}
+                        </div>
                     </div>
                 )}
             </div>
@@ -320,9 +324,7 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
                             title={`查看第 ${index + 1} 本书`}
                             className={cn(
                                 'w-2 h-2 rounded-full transition-colors',
-                                index === activeIndex
-                                    ? 'bg-blue-600 dark:bg-blue-400'
-                                    : 'bg-gray-300 dark:bg-gray-600'
+                                index === activeIndex ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-300 dark:bg-gray-600'
                             )}
                             aria-label={`跳转到第 ${index + 1} 本书`}
                         />
@@ -334,6 +336,52 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
             {/* <div className="absolute top-4 left-1/2 transform -translate-x-1/2 text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-3 py-1 rounded-full shadow-sm border border-gray-200 dark:border-gray-700">
                 使用 ← → 键导航，Enter 键打开
             </div> */}
+
+            <AnimatePresence mode="sync">
+                {expandBook !== null && items[expandBook] && (
+                    <div className="fixed inset-0 z-50 flex bg-[var(--background-primary)]">
+                        <div className="flex flex-row h-4/5 pt-16! gap-8">
+                            <motion.img
+                                layoutId={`cover-${items[expandBook]?.id}`}
+                                src={items[expandBook]?.metadata?.coverUrl}
+                                alt={items[expandBook]?.title}
+                                className="w-fit ml-16 object-cover no-drag"
+                                draggable={false}
+                                onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.className += ' hidden';
+                                }}
+                            />
+                            <motion.div exit={{ opacity: 0 }} className="ml-4 flex flex-col gap-2 duration-75">
+                                <h2 className="text-2xl font-bold">{items[expandBook]?.title}</h2>
+                                {items[expandBook]?.author && (
+                                    <p className="text-gray-600 dark:text-gray-400">{items[expandBook]?.author}</p>
+                                )}
+                                {items[expandBook]?.metadata?.description && (
+                                    <p className="text-gray-600 dark:text-gray-400 whitespace-break-spaces select-text">
+                                        {items[expandBook]?.metadata?.description}
+                                    </p>
+                                )}
+                                {items[expandBook]?.metadata?.subject && (
+                                    <div className="flex flex-wrap gap-1 mt-2">
+                                        {items[expandBook]?.metadata?.subject.map((tag, idx) => (
+                                            <span
+                                                key={idx}
+                                                className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full"
+                                            >
+                                                {tag.trim()}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                            </motion.div>
+                        </div>
+                        <button onClick={() => setExpandBook(null)} className="foliate-button absolute right-2 top-2">
+                            <X />
+                        </button>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

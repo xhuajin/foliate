@@ -12,6 +12,7 @@ export const DEFAULT_SETTINGS: FoliateSettings = {
     recentBooks: [],
     maxRecentBooks: 10,
     excerptSuccessNotification: true,
+    bookshelfType: 'grid',
     // 其他摘录方式不够完善，暂时只用 per-note
     excerptStorageMode: 'per-note',
     autoSaveProgress: true,
@@ -54,12 +55,10 @@ class FoliateSettingTab extends PluginSettingTab {
             .setName(t('settings_preferBookFont_name'))
             .setDesc(t('settings_preferBookFont_desc'))
             .addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.preferBookFont)
-                    .onChange(async (value) => {
-                        this.plugin.settings.preferBookFont = value;
-                        await this.plugin.saveSettings();
-                    })
+                toggle.setValue(this.plugin.settings.preferBookFont).onChange(async (value) => {
+                    this.plugin.settings.preferBookFont = value;
+                    await this.plugin.saveSettings();
+                })
             );
 
         new Setting(containerEl)
@@ -91,20 +90,16 @@ class FoliateSettingTab extends PluginSettingTab {
             );
 
         // 阅读设置
-        new Setting(containerEl)
-            .setName(t('settings_reading_heading'))
-            .setHeading();
+        new Setting(containerEl).setName(t('settings_reading_heading')).setHeading();
 
         new Setting(containerEl)
             .setName(t('settings_autoSaveProgress_name'))
             .setDesc(t('settings_autoSaveProgress_desc'))
             .addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.autoSaveProgress)
-                    .onChange(async (value) => {
-                        this.plugin.settings.autoSaveProgress = value;
-                        await this.plugin.saveSettings();
-                    })
+                toggle.setValue(this.plugin.settings.autoSaveProgress).onChange(async (value) => {
+                    this.plugin.settings.autoSaveProgress = value;
+                    await this.plugin.saveSettings();
+                })
             );
 
         // new Setting(containerEl)
@@ -123,27 +118,20 @@ class FoliateSettingTab extends PluginSettingTab {
             .setName(t('settings_enableKeyboardNavigation_name'))
             .setDesc(t('settings_enableKeyboardNavigation_desc'))
             .addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.enableKeyboardNavigation)
-                    .onChange(async (value) => {
-                        this.plugin.settings.enableKeyboardNavigation = value;
-                        await this.plugin.saveSettings();
-                    })
+                toggle.setValue(this.plugin.settings.enableKeyboardNavigation).onChange(async (value) => {
+                    this.plugin.settings.enableKeyboardNavigation = value;
+                    await this.plugin.saveSettings();
+                })
             );
 
         new Setting(containerEl)
             .setName(t('settings_enableMouseSideButtonNavigation_name'))
             .setDesc(t('settings_enableMouseSideButtonNavigation_desc'))
             .addToggle((toggle) =>
-                toggle
-                    .setValue(
-                        this.plugin.settings.enableMouseSideButtonNavigation
-                    )
-                    .onChange(async (value) => {
-                        this.plugin.settings.enableMouseSideButtonNavigation =
-                            value;
-                        await this.plugin.saveSettings();
-                    })
+                toggle.setValue(this.plugin.settings.enableMouseSideButtonNavigation).onChange(async (value) => {
+                    this.plugin.settings.enableMouseSideButtonNavigation = value;
+                    await this.plugin.saveSettings();
+                })
             );
 
         new Setting(containerEl)
@@ -160,18 +148,28 @@ class FoliateSettingTab extends PluginSettingTab {
                     })
             );
 
-        new Setting(containerEl)
-            .setName(t('settings_excerpt_heading'))
-            .setHeading();
+        new Setting(containerEl).setName(t('settings_excerpt_heading')).setHeading();
 
         new Setting(containerEl)
             .setName(t('settings_excerptSuccessNotification_name'))
             .setDesc(t('settings_excerptSuccessNotification_desc'))
             .addToggle((toggle) =>
-                toggle
-                    .setValue(this.plugin.settings.excerptSuccessNotification)
-                    .onChange(async (value) => {
-                        this.plugin.settings.excerptSuccessNotification = value;
+                toggle.setValue(this.plugin.settings.excerptSuccessNotification).onChange(async (value) => {
+                    this.plugin.settings.excerptSuccessNotification = value;
+                    await this.plugin.saveSettings();
+                })
+            );
+
+        new Setting(containerEl)
+            .setName(t('settings_bookshelfType_name'))
+            .setDesc(t('settings_bookshelfType_desc'))
+            .addDropdown((dropdown) =>
+                dropdown
+                    .addOption('grid', t('settings_bookshelfType_grid'))
+                    .addOption('cover', t('settings_bookshelfType_cover'))
+                    .setValue(this.plugin.settings.bookshelfType)
+                    .onChange(async (value: string) => {
+                        this.plugin.settings.bookshelfType = value as 'grid' | 'cover';
                         await this.plugin.saveSettings();
                     })
             );
@@ -228,10 +226,7 @@ class FoliateSettingTab extends PluginSettingTab {
 
             // 获取当前页面的书籍
             const startIndex = this.currentPage * booksPerPage;
-            const endIndex = Math.min(
-                startIndex + booksPerPage,
-                recentBooks.length
-            );
+            const endIndex = Math.min(startIndex + booksPerPage, recentBooks.length);
             const currentPageBooks = recentBooks.slice(startIndex, endIndex);
 
             // 分页导航（如果需要）
@@ -245,40 +240,29 @@ class FoliateSettingTab extends PluginSettingTab {
 
                 if (this.currentPage > 0) {
                     paginationSetting.addButton((button) =>
-                        button
-                            .setButtonText(t('settings_previousPage'))
-                            .onClick(() => {
-                                this.currentPage--;
-                                this.display();
-                            })
+                        button.setButtonText(t('settings_previousPage')).onClick(() => {
+                            this.currentPage--;
+                            this.display();
+                        })
                     );
                 }
 
                 if (this.currentPage < totalPages - 1) {
                     paginationSetting.addButton((button) =>
-                        button
-                            .setButtonText(t('settings_nextPage'))
-                            .onClick(() => {
-                                this.currentPage++;
-                                this.display();
-                            })
+                        button.setButtonText(t('settings_nextPage')).onClick(() => {
+                            this.currentPage++;
+                            this.display();
+                        })
                     );
                 }
             } else {
-                new Setting(containerEl)
-                    .setName(t('settings_recent_heading'))
-                    .setHeading();
+                new Setting(containerEl).setName(t('settings_recent_heading')).setHeading();
             }
 
             // 显示当前页面的书籍
             for (const book of currentPageBooks) {
-                const rawProgress =
-                    (book.sectionIndex / Math.max(book.totalSections - 1, 1)) *
-                    100;
-                const progress =
-                    rawProgress % 1 === 0
-                        ? Math.round(rawProgress)
-                        : Math.round(rawProgress * 10) / 10;
+                const rawProgress = (book.sectionIndex / Math.max(book.totalSections - 1, 1)) * 100;
+                const progress = rawProgress % 1 === 0 ? Math.round(rawProgress) : Math.round(rawProgress * 10) / 10;
                 const lastReadDate = new Date(book.lastRead).toLocaleString();
 
                 const progressText = t(
@@ -294,18 +278,12 @@ class FoliateSettingTab extends PluginSettingTab {
                     .setDesc(`${progressText}\n${lastReadText}`)
                     .addButton((button) =>
                         button
-                            .setButtonText(
-                                t('settings_clearBookProgress_button')
-                            )
+                            .setButtonText(t('settings_clearBookProgress_button'))
                             .setTooltip(t('settings_clearBookProgress_desc'))
                             .onClick(async () => {
                                 // 清除这本书的阅读记录
-                                await this.plugin.clearBookProgress(
-                                    book.filePath
-                                );
-                                new Notice(
-                                    t('settings_bookCleared', book.fileName)
-                                );
+                                await this.plugin.clearBookProgress(book.filePath);
+                                new Notice(t('settings_bookCleared', book.fileName));
                                 this.display(); // 刷新界面
                             })
                     );
@@ -313,21 +291,17 @@ class FoliateSettingTab extends PluginSettingTab {
         }
 
         // 操作按钮
-        new Setting(containerEl)
-            .setName(t('settings_actions_heading'))
-            .setHeading();
+        new Setting(containerEl).setName(t('settings_actions_heading')).setHeading();
 
         new Setting(containerEl)
             .setName(t('settings_cleanupOldProgress_name'))
             .setDesc(t('settings_cleanupOldProgress_desc'))
             .addButton((button) =>
-                button
-                    .setButtonText(t('settings_cleanup_button'))
-                    .onClick(async () => {
-                        await this.plugin.cleanupOldProgress();
-                        new Notice(t('settings_cleanupOldProgress_name'));
-                        this.display(); // 刷新界面
-                    })
+                button.setButtonText(t('settings_cleanup_button')).onClick(async () => {
+                    await this.plugin.cleanupOldProgress();
+                    new Notice(t('settings_cleanupOldProgress_name'));
+                    this.display(); // 刷新界面
+                })
             );
 
         // 清理所有阅读记录
@@ -339,9 +313,7 @@ class FoliateSettingTab extends PluginSettingTab {
                     .setWarning()
                     .setButtonText(t('settings_clearAllProgress_button'))
                     .onClick(async () => {
-                        const confirmed = confirm(
-                            t('settings_clearAllProgress_confirm')
-                        );
+                        const confirmed = confirm(t('settings_clearAllProgress_confirm'));
                         if (!confirmed) return;
                         await this.plugin.clearAllReadingProgress();
                         new Notice(t('settings_clearAllProgress_done'));

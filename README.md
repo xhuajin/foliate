@@ -8,9 +8,9 @@ This obsidian plugin allow you to read EPUB file in obsidian.
 
 ## Key Highlights
 
-![Cover Flow](./docs/reading-history-coverflow.png)
+![Cover Flow](./docs/bookshelf-coverflow.png)
 
 - A clean reading view.
-- A reading history view.
+- A bookshelf view.
 - Easy excerpts of text.
 - Quickly share selected content.

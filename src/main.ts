@@ -1,13 +1,6 @@
 import { Plugin, TFile, WorkspaceLeaf } from 'obsidian';
-import {
-    EpubView,
-    EPUB_VIEW_TYPE,
-    EPUB_FILE_EXTENSION,
-} from './view/EpubView.tsx';
-import {
-    ReadingHistoryView,
-    READING_HISTORY_VIEW_TYPE,
-} from './view/ReadingHistoryView.tsx';
+import { EpubView, EPUB_VIEW_TYPE, EPUB_FILE_EXTENSION } from './view/EpubView.tsx';
+import { BookshelfView, BOOKSHELF_VIEW_TYPE as BOOKSHELF_VIEW_TYPE } from './view/BookshelfView.tsx';
 import { EpubTocView, EPUB_TOC_VIEW_TYPE } from './view/EpubTocView.tsx';
 import './styles.css';
 import FoliateSettingTab, { DEFAULT_SETTINGS } from './settings.ts';
@@ -34,9 +27,9 @@ export default class FoliatePlugin extends Plugin {
             return new EpubTocView(leaf, this);
         });
 
-        // 注册阅读历史视图
-        this.registerView(READING_HISTORY_VIEW_TYPE, (leaf) => {
-            return new ReadingHistoryView(leaf, this);
+        // 注册书架视图
+        this.registerView(BOOKSHELF_VIEW_TYPE, (leaf) => {
+            return new BookshelfView(leaf, this);
         });
 
         // 注册文件菜单处理程序 - 右键点击 .epub 文件时显示选项（保留作为备用）
@@ -56,8 +49,8 @@ export default class FoliatePlugin extends Plugin {
 
         // 添加一个功能区图标
         this.addRibbonIcon('library', 'Foliate', (_evt: MouseEvent) => {
-            // 当点击功能区图标时打开阅读历史页面
-            this.openReadingHistory();
+            // 当点击功能区图标时打开书架页面
+            this.openBookshelf();
         });
 
         // 这将在状态栏中添加一个状态栏项目，在桌面上不起作用
@@ -67,12 +60,12 @@ export default class FoliatePlugin extends Plugin {
         // 设置面板
         this.addSettingTab(new FoliateSettingTab(this.app, this));
 
-        // 添加打开阅读历史的命令
+        // 添加打开书架的命令
         this.addCommand({
-            id: 'open-reading-history',
-            name: t('openReadingHistory'),
+            id: 'open-bookshelf',
+            name: t('openBookshelf'),
             callback: () => {
-                this.openReadingHistory();
+                this.openBookshelf();
             },
         });
 
@@ -81,27 +74,24 @@ export default class FoliatePlugin extends Plugin {
         // epub 文件被重命名/移动时，更新在 data.json 的记录
         this.registerEvent(
             this.app.vault.on('rename', async (file, oldPath) => {
-                if (!(file instanceof TFile) || file.extension !== 'epub')
-                    return;
+                if (!(file instanceof TFile) || file.extension !== 'epub') return;
 
                 const newPath = file.path;
                 const newName = file.name;
 
                 let changed = false;
                 // recentBooks 中的路径更新
-                this.settings.recentBooks = this.settings.recentBooks.map(
-                    (b) => {
-                        if (b.filePath === oldPath) {
-                            changed = true;
-                            return {
-                                ...b,
-                                filePath: newPath,
-                                fileName: newName,
-                            };
-                        }
-                        return b;
+                this.settings.recentBooks = this.settings.recentBooks.map((b) => {
+                    if (b.filePath === oldPath) {
+                        changed = true;
+                        return {
+                            ...b,
+                            filePath: newPath,
+                            fileName: newName,
+                        };
                     }
-                );
+                    return b;
+                });
 
                 // perBookExcerptMap 中可能以 filePath 作为 key
                 if (this.settings.perBookExcerptMap) {
@@ -121,11 +111,7 @@ export default class FoliatePlugin extends Plugin {
     }
 
     async loadSettings(): Promise<void> {
-        this.settings = Object.assign(
-            {},
-            DEFAULT_SETTINGS,
-            await this.loadData()
-        );
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
     }
 
     async saveSettings(): Promise<void> {
@@ -142,10 +128,7 @@ export default class FoliatePlugin extends Plugin {
         if (existingIndex >= 0) {
             // 合并元数据，避免覆盖用户在 data.json 中的手动修改
             const existing = this.settings.recentBooks[existingIndex]!;
-            const mergedMeta = mergeMetadata(
-                existing.metadata,
-                progress.metadata
-            );
+            const mergedMeta = mergeMetadata(existing.metadata, progress.metadata);
             // 更新现有进度（保持其它字段以传入 progress 为准）
             this.settings.recentBooks[existingIndex] = {
                 ...existing,
@@ -155,17 +138,10 @@ export default class FoliatePlugin extends Plugin {
         } else {
             // 添加新进度
             const mergedMeta = mergeMetadata(undefined, progress.metadata);
-            this.settings.recentBooks.unshift(
-                mergedMeta ? { ...progress, metadata: mergedMeta } : progress
-            );
+            this.settings.recentBooks.unshift(mergedMeta ? { ...progress, metadata: mergedMeta } : progress);
             // 限制最近书籍数量
-            if (
-                this.settings.recentBooks.length > this.settings.maxRecentBooks
-            ) {
-                this.settings.recentBooks = this.settings.recentBooks.slice(
-                    0,
-                    this.settings.maxRecentBooks
-                );
+            if (this.settings.recentBooks.length > this.settings.maxRecentBooks) {
+                this.settings.recentBooks = this.settings.recentBooks.slice(0, this.settings.maxRecentBooks);
             }
         }
 
@@ -174,18 +150,12 @@ export default class FoliatePlugin extends Plugin {
 
     // 获取阅读进度
     getReadingProgress(filePath: string): EpubReadingProgress | null {
-        return (
-            this.settings.recentBooks.find(
-                (readingProgress) => readingProgress.filePath === filePath
-            ) || null
-        );
+        return this.settings.recentBooks.find((readingProgress) => readingProgress.filePath === filePath) || null;
     }
 
     // 获取最近阅读的书籍列表
     getRecentBooks(): EpubReadingProgress[] {
-        return this.settings.recentBooks.sort(
-            (a, b) => b.lastRead - a.lastRead
-        );
+        return this.settings.recentBooks.sort((a, b) => b.lastRead - a.lastRead);
     }
 
     // 清理过期的阅读记录
@@ -208,20 +178,16 @@ export default class FoliatePlugin extends Plugin {
 
     // 清除指定书籍的阅读记录
     async clearBookProgress(filePath: string): Promise<void> {
-        this.settings.recentBooks = this.settings.recentBooks.filter(
-            (book) => book.filePath !== filePath
-        );
+        this.settings.recentBooks = this.settings.recentBooks.filter((book) => book.filePath !== filePath);
         await this.saveSettings();
     }
 
     async openEpubFile(file: TFile): Promise<void> {
         // 检查是否已经有这个特定文件的视图打开
-        const existingLeaf = this.app.workspace
-            .getLeavesOfType(EPUB_VIEW_TYPE)
-            .find((leaf) => {
-                const view = leaf.view as EpubView;
-                return view && view.file?.path === file.path;
-            });
+        const existingLeaf = this.app.workspace.getLeavesOfType(EPUB_VIEW_TYPE).find((leaf) => {
+            const view = leaf.view as EpubView;
+            return view && view.file?.path === file.path;
+        });
 
         if (existingLeaf) {
             // 如果已经打开了相同文件，就激活这个标签页
@@ -233,12 +199,10 @@ export default class FoliatePlugin extends Plugin {
         this.app.workspace.getLeaf('tab').openFile(file);
     }
 
-    // 打开阅读历史页面
-    async openReadingHistory(): Promise<void> {
-        // 检查是否已经有阅读历史视图打开
-        const existingLeaf = this.app.workspace.getLeavesOfType(
-            READING_HISTORY_VIEW_TYPE
-        )[0];
+    // 打开书架页面
+    async openBookshelf(): Promise<void> {
+        // 检查是否已经有书架视图打开
+        const existingLeaf = this.app.workspace.getLeavesOfType(BOOKSHELF_VIEW_TYPE)[0];
 
         if (existingLeaf) {
             // 如果已经打开，就激活这个标签页
@@ -251,7 +215,7 @@ export default class FoliatePlugin extends Plugin {
 
         // 设置叶子节点的视图类型
         await leaf.setViewState({
-            type: READING_HISTORY_VIEW_TYPE,
+            type: BOOKSHELF_VIEW_TYPE,
             active: true,
         });
     }
@@ -263,8 +227,7 @@ export default class FoliatePlugin extends Plugin {
         onSectionSelect: (sectionIndex: number) => void
     ): Promise<void> {
         // 检查是否已经有目录视图打开
-        let existingLeaf =
-            this.app.workspace.getLeavesOfType(EPUB_TOC_VIEW_TYPE)[0];
+        let existingLeaf = this.app.workspace.getLeavesOfType(EPUB_TOC_VIEW_TYPE)[0];
 
         if (!existingLeaf) {
             // 在左侧边栏创建新的叶子节点

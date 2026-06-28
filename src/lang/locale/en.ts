@@ -41,7 +41,7 @@ export default {
 
     // Main.ts
     openWithFoliate: 'Open with Foliate',
-    openReadingHistory: 'Open Reading History',
+    openBookshelf: 'Open Bookshelf',
     viewCreationFailed: 'View creation failed',
     cannotCreateSidebarLeaf: 'Cannot create sidebar leaf',
 
@@ -65,8 +65,7 @@ export default {
     // Notices (keep simple)
     copiedExcerptFile: 'Excerpt file content copied',
     excerptFileNotFound: 'Excerpt file not found',
-    removeHighlightOnly:
-        'The excerpt comes from a merged file. Only removed highlight.',
+    removeHighlightOnly: 'The excerpt comes from a merged file. Only removed highlight.',
     deletedExcerptFile: 'Excerpt file deleted',
     failedToDeleteExcerptFile: 'Failed to delete excerpt file',
     excerptCopiedToClipboard: 'Excerpt copied to clipboard',
@@ -80,9 +79,9 @@ export default {
     failedToWriteExcerpt: 'Failed to write excerpt, please check console',
     appendedToUnifiedExcerpt: 'Appended to unified excerpt file',
 
-    // ReadingHistoryView
-    readingHistory: 'Reading History',
-    myReadingHistory: 'My Reading History',
+    // BookshelfView
+    bookshelf: 'Bookshelf',
+    myBookshelf: 'My Bookshelf',
     noReadingRecord: 'No reading records yet',
     startYourJourney: 'Start your reading journey',
     openAnyEpub: 'Open any EPUB file in Obsidian to start reading',
@@ -93,6 +92,9 @@ export default {
     daysAgo_suffix: ' days ago',
     unnamedChapter: 'Untitled chapter',
     unknown: 'Unknown',
+    switchToCoverFlow: 'Switch to Cover Flow',
+    switchToGrid: 'Switch to Grid',
+    toggleBookshelfType: 'Toggle bookshelf type',
 
     // EpubTocView
     tocView: 'TOC',
@@ -120,35 +122,31 @@ export default {
     settings_pageWidth_desc: 'Maximum width (px) of reading area',
     settings_reading_heading: 'Reading',
     settings_autoSaveProgress_name: 'Auto save progress',
-    settings_autoSaveProgress_desc:
-        'Automatically store reading progress and position',
+    settings_autoSaveProgress_desc: 'Automatically store reading progress and position',
     settings_enableKeyboardNavigation_name: 'Enable keyboard navigation',
-    settings_enableKeyboardNavigation_desc:
-        'Allow using keyboard arrow keys for navigation',
-    settings_enableMouseSideButtonNavigation_name:
-        'Enable mouse side button navigation',
-    settings_enableMouseSideButtonNavigation_desc:
-        'Allow using mouse side buttons for navigation',
+    settings_enableKeyboardNavigation_desc: 'Allow using keyboard arrow keys for navigation',
+    settings_enableMouseSideButtonNavigation_name: 'Enable mouse side button navigation',
+    settings_enableMouseSideButtonNavigation_desc: 'Allow using mouse side buttons for navigation',
     settings_showReadingProgress_name: 'Show reading progress',
     settings_showReadingProgress_desc: 'Display reading progress information',
     settings_maxRecentBooks_name: 'Recent books count',
     settings_maxRecentBooks_desc: 'Number of recent books to keep',
+    settings_bookshelfType_name: 'Bookshelf type',
+    settings_bookshelfType_desc: 'Display books in a grid or cover flow',
+    settings_bookshelfType_grid: 'Grid',
+    settings_bookshelfType_cover: 'Cover Flow',
     settings_excerpt_heading: 'Excerpt',
     settings_excerptSuccessNotification_name: 'Show success notice',
-    settings_excerptSuccessNotification_desc:
-        'Show a notice when an excerpt is created',
+    settings_excerptSuccessNotification_desc: 'Show a notice when an excerpt is created',
     settings_recent_heading: 'Recent reading',
     settings_actions_heading: 'Actions',
     settings_cleanupOldProgress_name: 'Clean outdated records',
-    settings_cleanupOldProgress_desc:
-        'Remove reading records older than 30 days',
+    settings_cleanupOldProgress_desc: 'Remove reading records older than 30 days',
     settings_cleanup_button: 'Clean',
     settings_clearAllProgress_name: 'Clear all reading records',
-    settings_clearAllProgress_desc:
-        'Remove ALL stored reading progress (irreversible)',
+    settings_clearAllProgress_desc: 'Remove ALL stored reading progress (irreversible)',
     settings_clearAllProgress_button: 'Clear all',
-    settings_clearAllProgress_confirm:
-        'This will delete ALL reading records. Continue?',
+    settings_clearAllProgress_confirm: 'This will delete ALL reading records. Continue?',
     settings_clearAllProgress_done: 'All reading records cleared',
     settings_clearBookProgress_desc: "Clear this book's reading record",
     settings_clearBookProgress_button: 'Clear',

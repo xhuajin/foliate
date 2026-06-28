@@ -102,8 +102,8 @@
     overflow: hidden;
 }
 
-.workspace-leaf-content[data-type='reading-history-view'] .view-content {
-    padding-top: 0;
+.workspace-leaf-content[data-type='bookshelf-view'] .view-content {
+    padding: 0;
     overflow: hidden;
 }
 
@@ -322,19 +322,19 @@ foliate-view {
     opacity: 0.7;
 }
 
-/* Reading History - Linear inspired minimal design */
-.reading-history-container {
+/* Bookshelf - Linear inspired minimal design */
+.bookshelf-container {
     background: var(--background-primary);
     color: var(--text-normal);
     height: 100%;
 }
 
-.reading-history-header {
+.bookshelf-header {
     margin-bottom: 2rem;
     text-align: center;
 }
 
-.reading-history-header h1 {
+.bookshelf-header h1 {
     font-size: 1.5rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
@@ -342,7 +342,7 @@ foliate-view {
     letter-spacing: -0.025em;
 }
 
-.reading-history-header p {
+.bookshelf-header p {
     color: var(--text-muted);
     font-size: 0.875rem;
     opacity: 0.8;

@@ -41,7 +41,7 @@ export default {
 
     // Main.ts
     openWithFoliate: '用 Foliate 打开',
-    openReadingHistory: '打开阅读历史',
+    openBookshelf: '打开书架',
     viewCreationFailed: '视图创建失败',
     cannotCreateSidebarLeaf: '无法创建左侧边栏叶子节点',
 
@@ -80,10 +80,10 @@ export default {
     failedToWriteExcerpt: '写入摘录失败，请查看控制台',
     appendedToUnifiedExcerpt: '已追加到统一摘录文件',
 
-    // 阅读历史视图
-    readingHistory: '阅读历史',
-    myReadingHistory: '我的阅读历史',
-    noReadingRecord: '还没有阅读记录',
+    // 书架视图
+    bookshelf: '书架',
+    myBookshelf: '我的书架',
+    noBookRecord: '还没有书籍记录',
     startYourJourney: '开始你的阅读之旅',
     openAnyEpub: '在 Obsidian 中打开任意 EPUB 文件开始阅读',
     booksCountPrefix: '共 ',
@@ -93,6 +93,9 @@ export default {
     daysAgo_suffix: '天前',
     unnamedChapter: '未命名章节',
     unknown: '未知',
+    switchToCoverFlow: '切换到封面流',
+    switchToGrid: '切换到网格',
+    toggleBookshelfType: '切换书架类型',
 
     // 目录视图
     tocView: '目录',
@@ -112,8 +115,7 @@ export default {
     settings_fontSize_name: '字体大小',
     settings_fontSize_desc: 'EPUB 正文的字体大小（像素）',
     settings_preferBookFont_name: '使用 EPUB 内置字体',
-    settings_preferBookFont_desc:
-        '关闭时使用 Obsidian 的 var(--font-text)，开启后优先使用书籍内置字体（会提升优先级）',
+    settings_preferBookFont_desc: '关闭时使用 Obsidian 的 var(--font-text)，开启后优先使用书籍内置字体（会提升优先级）',
     settings_lineHeight_name: '行高',
     settings_lineHeight_desc: '正文文本的行间距',
     settings_pageWidth_name: '页面宽度',
@@ -122,15 +124,17 @@ export default {
     settings_autoSaveProgress_name: '自动保存进度',
     settings_autoSaveProgress_desc: '自动保存阅读进度与位置',
     settings_enableKeyboardNavigation_name: '启用键盘导航',
-    settings_enableKeyboardNavigation_desc:
-        '允许使用键盘方向键进行上一页/下一页的导航',
+    settings_enableKeyboardNavigation_desc: '允许使用键盘方向键进行上一页/下一页的导航',
     settings_enableMouseSideButtonNavigation_name: '启用鼠标侧键导航',
-    settings_enableMouseSideButtonNavigation_desc:
-        '允许使用鼠标侧键进行上一页/下一页的导航',
+    settings_enableMouseSideButtonNavigation_desc: '允许使用鼠标侧键进行上一页/下一页的导航',
     settings_showReadingProgress_name: '显示阅读进度',
     settings_showReadingProgress_desc: '在界面中显示阅读进度信息',
     settings_maxRecentBooks_name: '最近阅读记录数',
     settings_maxRecentBooks_desc: '保留的最近阅读书籍数量',
+    settings_bookshelfType_name: '书架类型',
+    settings_bookshelfType_desc: '以网格或封面流的形式显示书籍',
+    settings_bookshelfType_grid: '网格',
+    settings_bookshelfType_cover: '封面流',
     settings_excerpt_heading: '摘录',
     settings_excerptSuccessNotification_name: '摘录成功是否提示',
     settings_excerptSuccessNotification_desc: '创建摘录后是否弹出提示',

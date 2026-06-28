@@ -201,46 +201,48 @@ const EpubToc: React.FC<EpubTocProps> = ({ book, tocItems, currentSectionIndex, 
 
     return (
         <div className="epub-toc-container">
-            <div className="toc-toolbar">
-                <div
-                    className="toc-btn clickable-icon nav-action-button"
-                    onClick={() => tree.collapseAll()}
-                    title={t('collapseAll')}
-                >
-                    <ChevronsDownUp size={18} />
-                </div>
-                <div
-                    className="toc-btn clickable-icon nav-action-button"
-                    onClick={() => tree.expandAll()}
-                    title={t('expandAll')}
-                >
-                    <ChevronsUpDown size={18} />
-                </div>
-                <div
-                    className={cn(
-                        'toc-btn clickable-icon nav-action-button',
-                        !currentTocItem ? 'opacity-50 cursor-not-allowed' : ''
-                    )}
-                    onClick={() => {
-                        if (currentTocItem) {
-                            // 首先展开到当前项的路径
-                            const pathToRoot = getPathToRoot(currentTocItem.id);
-                            // 展开路径上的所有父级项
-                            const expandedItems = pathToRoot.slice(0, -1); // 不包括当前项本身
+            <div className="nav-header">
+                <div className="nav-buttons-container toc-toolbar">
+                    <div
+                        className="toc-btn clickable-icon nav-action-button"
+                        onClick={() => tree.collapseAll()}
+                        title={t('collapseAll')}
+                    >
+                        <ChevronsDownUp size={18} />
+                    </div>
+                    <div
+                        className="toc-btn clickable-icon nav-action-button"
+                        onClick={() => tree.expandAll()}
+                        title={t('expandAll')}
+                    >
+                        <ChevronsUpDown size={18} />
+                    </div>
+                    <div
+                        className={cn(
+                            'toc-btn clickable-icon nav-action-button',
+                            !currentTocItem ? 'opacity-50 cursor-not-allowed' : ''
+                        )}
+                        onClick={() => {
+                            if (currentTocItem) {
+                                // 首先展开到当前项的路径
+                                const pathToRoot = getPathToRoot(currentTocItem.id);
+                                // 展开路径上的所有父级项
+                                const expandedItems = pathToRoot.slice(0, -1); // 不包括当前项本身
 
-                            // 更新展开状态
-                            tree.applySubStateUpdate('expandedItems', expandedItems);
-                            tree.rebuildTree();
+                                // 更新展开状态
+                                tree.applySubStateUpdate('expandedItems', expandedItems);
+                                tree.rebuildTree();
 
-                            // 等待DOM更新后再滚动
-                            setTimeout(() => {
-                                scrollToCurrent('center');
-                            }, 150); // 增加延迟确保DOM重建完成
-                        }
-                    }}
-                    title={t('focusCurrent')}
-                >
-                    <Focus size={18} />
+                                // 等待DOM更新后再滚动
+                                setTimeout(() => {
+                                    scrollToCurrent('center');
+                                }, 150); // 增加延迟确保DOM重建完成
+                            }
+                        }}
+                        title={t('focusCurrent')}
+                    >
+                        <Focus size={18} />
+                    </div>
                 </div>
             </div>
 

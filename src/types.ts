@@ -89,11 +89,7 @@ export interface EpubReadingProgress {
     metadata?: EpubMetadata; // 新增元数据字段
 }
 
-export type ExportStorageMode =
-    | 'daily-note'
-    | 'per-note'
-    | 'per-book'
-    | 'single-note';
+export type ExportStorageMode = 'daily-note' | 'per-note' | 'per-book' | 'single-note';
 
 export interface FoliateSettings {
     // 通用设置
@@ -101,6 +97,7 @@ export interface FoliateSettings {
     lineHeight: number;
     pageWidth: number;
     theme: 'light' | 'dark' | 'auto';
+
     // 字体偏好：是否优先使用书籍自带字体
     preferBookFont: boolean;
 
@@ -121,6 +118,9 @@ export interface FoliateSettings {
     perBookExcerptMap?: Record<string, string>;
     // single-note: 全部摘录存储的单一文件路径
     singleExcerptPath?: string;
+
+    // 书架设置
+    bookshelfType: 'grid' | 'cover';
 
     // 其他设置
     autoSaveProgress: boolean;
