@@ -1,7 +1,6 @@
-import * as React from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '../../lib/utils';
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo, useRef } from 'react';
 
 interface GridItem {
     id: string;

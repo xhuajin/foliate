@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { App, Notice, TFile } from 'obsidian';
+import { App, Events, Notice, TFile } from 'obsidian';
 import {
     appHasDailyNotesPluginLoaded,
     createDailyNote,
     getAllDailyNotes,
     getDailyNote,
 } from 'obsidian-daily-notes-interface';
-import { EPUB } from 'foliate-js/epub.js';
+import { parseEpub } from '@/epub-parser';
 import type FoliatePlugin from '../main';
 import {
     ContextMenu,
@@ -44,7 +44,6 @@ import { cn } from '@/lib/utils';
 import { t } from '@/lang/helpers';
 import { normalizeAuthor } from '@/lib/metadata';
 import { EpubMetadata, EpubType, EpubTocItem } from '@/types';
-import { ZipEntry } from 'foliate-js/vendor/zip.js';
 
 interface FoliateViewProps {
     file: TFile;
@@ -60,7 +59,7 @@ const FoliateView: React.FC<FoliateViewProps> = ({
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [book, setBook] = useState<EpubType | null>(null);
-    const entriesRef = useRef<ZipEntry[] | null>(null);
+    const entriesRef = useRef<string[] | null>(null); // 归档内全部文件名（供字体扫描）
     const injectedFontRef = useRef<boolean>(false);
     const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
     const scrollToTopRef = useRef<HTMLDivElement>(null);
@@ -68,6 +67,8 @@ const FoliateView: React.FC<FoliateViewProps> = ({
     // 章节标题与可见性跟踪
     const [sectionTitle, setSectionTitle] = useState<string>('');
     const [isHeadVisible, setIsHeadVisible] = useState<boolean>(false);
+    // 设置版本号：每次设置保存时 +1，用于触发阅读器即时刷新
+    const [settingsRevision, setSettingsRevision] = useState(0);
     const headObserverRef = useRef<IntersectionObserver | null>(null);
     const observedHeadElRef = useRef<Element | null>(null);
 
@@ -177,70 +178,14 @@ const FoliateView: React.FC<FoliateViewProps> = ({
                 // 重置字体注入标记（新书可以重新注入）
                 injectedFontRef.current = false;
 
-                // 使用静态导入的 EPUB
+                // 使用自研的 epub-parser 解析 EPUB（内部自己处理 ZIP）
                 if (!file) {
                     throw new Error(`${t('file')} ${t('notFound')}`);
                 }
                 // 使用 vault.readBinary 读取二进制文件
                 const arrayBuffer = await app.vault.readBinary(file);
-                // 创建 ZIP loader（EPUB 文件是 ZIP 格式）
-                const {
-                    configure,
-                    ZipReader,
-                    BlobReader,
-                    TextWriter,
-                    BlobWriter,
-                } = await import('foliate-js/vendor/zip.js');
-                configure({ useWebWorkers: false });
-
-                // 将 ArrayBuffer 转换为 Blob
-                const blob = new Blob([arrayBuffer], {
-                    type: 'application/epub+zip',
-                });
-                const reader = new ZipReader(new BlobReader(blob));
-                const entries = await reader.getEntries();
-                entriesRef.current = entries;
-                const map = new Map(
-                    entries.map((entry: ZipEntry) => [entry.filename, entry])
-                );
-
-                const loadText = (name: string) => {
-                    const entry = map.get(name);
-                    if (entry) {
-                        return entry.getData(new TextWriter());
-                    } else {
-                        return null;
-                    }
-                };
-
-                const loadBlob = (name: string, type?: string) => {
-                    const entry = map.get(name);
-                    if (entry) {
-                        return entry.getData(new BlobWriter(type));
-                    } else {
-                        return null;
-                    }
-                };
-
-                const getSize = (name: string) =>
-                    (map.get(name) as ZipEntry)?.uncompressedSize ?? 0;
-
-                // 创建 SHA-1 函数（用于解密字体）
-                const sha1 = async (data: ArrayBuffer) => {
-                    const hashBuffer = await crypto.subtle.digest(
-                        'SHA-1',
-                        data
-                    );
-                    return Array.from(new Uint8Array(hashBuffer))
-                        .map((b) => b.toString(16).padStart(2, '0'))
-                        .join('');
-                };
-
-                const loader = { entries, loadText, loadBlob, getSize, sha1 };
-
-                // 使用正确的 API 创建 EPUB 实例
-                const epubInstance = new EPUB(loader);
-                const epub = (await epubInstance.init()) as EpubType;
+                const epub = await parseEpub(arrayBuffer);
+                entriesRef.current = epub.listFiles();
                 setBook(epub);
 
                 // 在EPUB加载完成后立即加载保存的进度
@@ -266,10 +211,20 @@ const FoliateView: React.FC<FoliateViewProps> = ({
 
     useEffect(() => {
         if (book && viewerRef.current) {
-            // 初始化 foliate-js 阅读器
+            // 初始化阅读器（渲染当前章节）
             initializeReader();
         }
     }, [book]);
+
+    // 监听设置变更事件（设置面板保存时触发），驱动阅读器即时刷新
+    useEffect(() => {
+        // Workspace 的类型声明用字面量事件名重载了 on()，自定义事件需按基类 Events 注册
+        const events = app.workspace as unknown as Events;
+        const ref = events.on('foliate:settings-changed', () => {
+            setSettingsRevision((r) => r + 1);
+        });
+        return () => events.offref(ref);
+    }, [app]);
 
     // 书籍加载完成或章节索引变化时，若 TOC 视图已打开，则自动切换为当前书籍的目录（静默，不切 tab）
     useTocSync(app, book, currentSectionIndex, (index) => {
@@ -1099,7 +1054,7 @@ const FoliateView: React.FC<FoliateViewProps> = ({
         return () => {
             abortController.abort();
         };
-    }, [currentSectionIndex, book, goToPrevSection, goToNextSection]);
+    }, [currentSectionIndex, book, goToPrevSection, goToNextSection, settingsRevision]);
 
     // 分享 Hook
     const { shareText, isSharing } = useShareSelection({
@@ -1129,6 +1084,10 @@ const FoliateView: React.FC<FoliateViewProps> = ({
                 );
                 staleSections.forEach((el) => el.remove());
             } catch {}
+
+            // 容器将被重建，重置字体注入标记，让需要时重新注入
+            // （旧的 @font-face 规则随旧容器销毁，重新开启“书籍字体”时需重新注入）
+            injectedFontRef.current = false;
 
             // 检查是否有内容
             if (!book.sections || book.sections.length === 0) {
@@ -1213,13 +1172,11 @@ const FoliateView: React.FC<FoliateViewProps> = ({
     const injectEmbeddedFonts = async (container: HTMLElement) => {
         if (!book || !entriesRef.current || !entriesRef.current.length) return;
         const fontExt = /\.(ttf|otf|woff2?|woff)$/i;
-        const fontEntries = entriesRef.current
-            .map((e: ZipEntry) => e.filename)
-            .filter(
-                (name: string) =>
-                    /(^|\/)OEBPS\/(Fonts|fonts)\//.test(name) &&
-                    fontExt.test(name)
-            );
+        const fontEntries = (entriesRef.current ?? []).filter(
+            (name: string) =>
+                /(^|\/)OEBPS\/(Fonts|fonts)\//.test(name) &&
+                fontExt.test(name)
+        );
         if (!fontEntries.length) return;
 
         const faces: string[] = [];
@@ -1258,6 +1215,14 @@ const FoliateView: React.FC<FoliateViewProps> = ({
         // 注入到阅读容器（不加作用域，让字体可被章节 CSS 正常引用）
         container.prepend(styleEl);
     };
+
+    // 设置变更后重建阅读器：字号/行距/页宽/字体偏好等立即生效（等效于重新打开）
+    useEffect(() => {
+        if (settingsRevision > 0 && book && viewerRef.current) {
+            void initializeReader();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [settingsRevision]);
 
     // 组件卸载时清理观察器
     useEffect(() => {
@@ -1340,7 +1305,7 @@ const FoliateView: React.FC<FoliateViewProps> = ({
             </div>
 
             <div ref={scrollToTopRef} className="epub-content h-full">
-                {/* foliate-js 渲染区域 */}
+                {/* 阅读器渲染区域 */}
                 <ContextMenu>
                     <ContextMenuTrigger>
                         <div

@@ -164,7 +164,7 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
             onWheel={handleWheel}
         >
             {/* Cover Flow Cards */}
-            <div className="relative h-80 w-full">
+            <div className="relative h-80 min-h-80 w-full">
                 <div className="relative h-full w-full">
                     {items.map((item, index) => {
                         const isActive = index === activeIndex;

@@ -40,7 +40,7 @@ class FoliateSettingTab extends PluginSettingTab {
             .setDesc(t('settings_fontSize_desc'))
             .addSlider((slider) =>
                 slider
-                    .setLimits(12, 24, 1)
+                    .setLimits(12, 20, 1)
                     .setValue(this.plugin.settings.fontSize)
                     .setDynamicTooltip()
                     .onChange(async (value) => {

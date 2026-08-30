@@ -116,6 +116,8 @@ export default class FoliatePlugin extends Plugin {
 
     async saveSettings(): Promise<void> {
         await this.saveData(this.settings);
+        // 广播设置变更事件，让已打开的阅读器立即应用新设置（无需重开 EPUB）
+        this.app.workspace.trigger('foliate:settings-changed', this.settings);
     }
 
     // 保存阅读进度

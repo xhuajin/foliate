@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, TFile, Notice, Menu } from 'obsidian';
+import { ItemView, WorkspaceLeaf, TFile, Notice } from 'obsidian';
 import { createRoot, Root } from 'react-dom/client';
 import * as React from 'react';
 import type FoliatePlugin from '../main';
@@ -10,7 +10,6 @@ import { CoverFlow, type CoverFlowItem } from '../components/bookshelf/coverflow
 import { t } from '@/lang/helpers';
 import { EpubReadingProgress } from '@/types';
 import { Grid } from '@/components/bookshelf/grid';
-import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
